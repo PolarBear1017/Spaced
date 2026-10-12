@@ -78,3 +78,32 @@ Pair ChatGPT mobile with the desktop host separately. Keep the host awake, onlin
 Example task: "Add a notes field for vocabulary. Inspect the existing schema and migrations, implement the frontend and migration, test on the development database, show the migration plan, and apply it to the named target environment."
 
 Once account access and the baseline are configured on the host, Codex can run these commands there. Choose the target environment explicitly for database changes; deleting data or changing a live schema needs the corresponding task authorization. GitHub push alone does not deploy database migrations or Edge Functions.
+
+## Daily review cloud sync
+
+`20261013001000_daily_review_cloud_sync.sql` adds account-owned `review_preferences`
+and `review_days` tables and the `sync_daily_review` RPC. It uses `auth.uid()` with
+security-invoker execution and owner-only RLS, including valid anonymous sessions.
+The RPC locks the account preferences row, unions each day's word IDs, and preserves
+already earned check-ins. A merged total can earn a check-in even if neither device
+reached the goal alone. `20261013002800_preserve_daily_review_targets.sql`
+preserves each day's target and re-evaluates incomplete historical days after
+delayed offline uploads, preventing missed check-ins after midnight. The first device establishes the account's calendar timezone;
+other devices use that timezone for daily progress and streaks.
+
+The frontend keeps a per-account cache and pending goal edit in localStorage for
+offline retry. Existing per-account browser history is imported on initial sync;
+guest history is not silently assigned to a different signed-in account. Cached
+goals initialize an absent cloud profile, but never overwrite an existing cloud
+goal unless the user explicitly changes the setting. Refresh occurs on focus,
+network reconnection, manual retry, and every 30 seconds. Subsequent syncs upload
+only changed days. Users must sign in to the same permanent account on each device;
+separate anonymous sessions are separate accounts.
+
+`supabase/tests/daily_review_cloud.sql` is a rollback-only integration test for a
+local/development database. Supply `user_a` and `user_b` as psql variables for two
+disposable Auth users with no existing review history; user A needs at least five
+library entries. It checks merges, goal changes, future-date rejection, owner-only
+RLS and rejection of unauthenticated RPC calls. Do not run it against real users.
+
+The database migration and frontend deployment remain separate steps.

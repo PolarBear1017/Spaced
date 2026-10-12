@@ -5,15 +5,14 @@ import {
   serializeFsrsCard,
   calculateReviewResult,
   normalizeEntries,
-  getReviewTimestamp,
-  isReviewDue,
-  parseExampleItem,
-  splitExampleLines
+  parseExampleItem
 } from '../../utils/data';
 import { getClozeValidAnswers } from '../../utils/text.jsx';
 import { updateUserLibraryProgress } from '../../services/libraryService';
 import { speak, getAudioUrl } from '../../services/speechService';
 import i18n from '../../i18n/config';
+import useDailyReviewProgress from './useDailyReviewProgress';
+import { localDayKey, reviewCalendarDate, recordReview, changeDailyGoal, dailyReviewStats, planReview, wordReviewId, isNewWord, filterReviewWords } from '../../utils/reviewPlanner';
 
 const useReview = ({
   vocabData,
@@ -24,10 +23,32 @@ const useReview = ({
   allFolderIds,
   setActiveTab,
   activeTab,
-  preferredAccent,
   audioPriority,
   playAudioShortcut = 'Tab'
 }) => {
+  const availableCount = new Set(vocabData.map(wordReviewId)).size;
+  const { progress, controller, progressKey, status: cloudStatus, cloudReady, anonymous } = useDailyReviewProgress(session);
+  const [clock, setClock] = useState(() => new Date());
+  const [sessionKind, setSessionKind] = useState('daily');
+  const [sessionSummary, setSessionSummary] = useState(null);
+  const [setupNotice, setSetupNotice] = useState('');
+  const ratedCardsRef = useRef(new Set());
+  const advancedCardsRef = useRef(new Set());
+  const sessionOwnerRef = useRef(progressKey);
+  useEffect(() => {
+    const refresh = () => setClock(new Date());
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, []);
+  const saveProgress = useCallback((transform, goalChanged = false) => {
+    controller.update(transform, goalChanged);
+    setClock(new Date());
+  }, [controller]);
+  const setDailyGoal = useCallback(goal => saveProgress(value => changeDailyGoal(value, goal, reviewCalendarDate(new Date(), value.timezone), availableCount), true), [saveProgress, availableCount]);
+  const calendarDate = reviewCalendarDate(clock, progress.timezone);
+  const todayStats = dailyReviewStats(progress, calendarDate);
+  const todayIds = progress.days[localDayKey(calendarDate)]?.words || [];
   const [reviewQueue, setReviewQueue] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [reviewMode, setReviewMode] = useState('flashcard');
@@ -39,11 +60,20 @@ const useReview = ({
   const [pendingAutoGrade, setPendingAutoGrade] = useState(null);
   const [answerHint, setAnswerHint] = useState('');
   const [hasMistake, setHasMistake] = useState(false);
+  useEffect(() => {
+    if (sessionOwnerRef.current !== progressKey) {
+      sessionOwnerRef.current = progressKey;
+      setReviewQueue([]);
+      setSessionSummary(null);
+      setSetupNotice('');
+      if (activeTab === 'review_session') setActiveTab('review');
+    }
+  }, [progressKey, activeTab, setActiveTab]);
   const [selectedReviewFolders, setSelectedReviewFolders] = useState(() => {
     try {
       const saved = localStorage.getItem('review_selected_folders');
       return saved ? JSON.parse(saved) : ['all'];
-    } catch (e) {
+    } catch {
       return ['all'];
     }
   });
@@ -52,7 +82,7 @@ const useReview = ({
     try {
       const saved = localStorage.getItem('review_only_starred');
       return saved === 'true';
-    } catch (e) {
+    } catch {
       return false;
     }
   });
@@ -77,12 +107,12 @@ const useReview = ({
   const advanceToNextCardRef = useRef(null);
 
   const fsrsParams = useMemo(() => generatorParameters({
-    enable_fuzzing: true,
+    enable_fuzz: true,
     request_retention: requestRetention
   }), [requestRetention]);
   const fsrs = useMemo(() => new FSRS(fsrsParams), [fsrsParams]);
 
-  const currentReviewWord = reviewQueue[currentCardIndex] || {};
+  const currentReviewWord = useMemo(() => reviewQueue[currentCardIndex] || {}, [reviewQueue, currentCardIndex]);
   const currentReviewEntries = useMemo(() => {
     if (reviewQueue.length === 0) return [];
     const selectedDefs = Array.isArray(currentReviewWord.selectedDefinitions)
@@ -93,8 +123,7 @@ const useReview = ({
     if (selectedDefs.length === 0) return normalizeEntries(currentReviewWord);
     const normalizedSelected = normalizeEntries({ entries: selectedDefs });
     if (normalizedSelected.length === 0) return normalizeEntries(currentReviewWord);
-    const randomIndex = Math.floor(Math.random() * normalizedSelected.length);
-    return [normalizedSelected[randomIndex]];
+    return [normalizedSelected[currentReviewWord.reviewEntryIndex || 0] || normalizedSelected[0]];
   }, [currentReviewWord, reviewQueue.length]);
   const primaryReviewEntry = currentReviewEntries[0] || {};
   const clozeExample = primaryReviewEntry.example || currentReviewWord.example || '';
@@ -131,92 +160,36 @@ const useReview = ({
       }
       return [...base, folderId];
     });
-  }, [allFolderIds]);
+  }, [allFolderIds, setSelectedReviewFolders]);
 
-  const buildReviewBatch = useCallback((words, batchSize) => {
-    if (words.length <= batchSize) return words;
-    const now = new Date();
-    const rolloverCutoff = new Date(now);
-    rolloverCutoff.setHours(24, 0, 0, 0);
-
-    const dueWords = [];
-    const newWords = [];
-    const notDueWords = [];
-
-    // Categorize words
-    words.forEach(word => {
-      const isNew = (word.proficiencyScore || 0) === 0;
-      if (isNew) {
-        newWords.push(word);
-      } else if (isReviewDue(word.nextReview, rolloverCutoff)) {
-        dueWords.push(word);
-      } else {
-        notDueWords.push(word);
-      }
-    });
-
-    // Sort by review priority
-    dueWords.sort((a, b) => getReviewTimestamp(a.nextReview) - getReviewTimestamp(b.nextReview));
-    notDueWords.sort((a, b) => getReviewTimestamp(a.nextReview, Number.MAX_SAFE_INTEGER) - getReviewTimestamp(b.nextReview, Number.MAX_SAFE_INTEGER));
-
-    const combined = [];
-
-    // 1. Allocate up to ~30% for new words
-    const idealNewWordsCount = Math.floor(batchSize * 0.3);
-    const actualNewWordsToPick = Math.min(newWords.length, idealNewWordsCount);
-
-    for (let i = 0; i < actualNewWordsToPick; i++) {
-      combined.push(newWords.shift());
-    }
-
-    // 2. Fill available remaining slots with due words
-    const remainingSlots1 = batchSize - combined.length;
-    const actualDueWordsToPick = Math.min(dueWords.length, remainingSlots1);
-    for (let i = 0; i < actualDueWordsToPick; i++) {
-      combined.push(dueWords.shift());
-    }
-
-    // 3. Fill any remaining empty slots using leftover new words, then not due words
-    const remainingSlots2 = batchSize - combined.length;
-    if (remainingSlots2 > 0) {
-      const leftoverNewToPick = Math.min(newWords.length, remainingSlots2);
-      for (let i = 0; i < leftoverNewToPick; i++) {
-        combined.push(newWords.shift());
-      }
-
-      const slotsLeftForNotDue = batchSize - combined.length;
-      if (slotsLeftForNotDue > 0) {
-        const notDueToPick = Math.min(notDueWords.length, slotsLeftForNotDue);
-        for (let i = 0; i < notDueToPick; i++) {
-          combined.push(notDueWords.shift());
-        }
-      }
-    }
-
-    // Shuffle the batch
-    for (let i = combined.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [combined[i], combined[j]] = [combined[j], combined[i]];
-    }
-    return combined;
-  }, []);
-
-  const startReview = useCallback((folderSelection, mode) => {
+  const startReview = useCallback((folderSelection, mode, kind = 'daily') => {
+    if (!cloudReady) return;
     const selectedIds = Array.isArray(folderSelection) ? folderSelection : [folderSelection];
-    const isAllSelected = selectedIds.includes('all')
-      || (allFolderIds.length > 0 && allFolderIds.every(id => selectedIds.includes(id)));
-    const filteredWords = vocabData.filter(word => {
-      if (onlyStarred && !word.isStarred) return false;
-      if (isAllSelected) return true;
-      return word.folderIds && word.folderIds.some(id => selectedIds.includes(id));
-    });
+    const filteredWords = filterReviewWords(vocabData, { folderIds: selectedIds, allFolderIds, onlyStarred });
     if (filteredWords.length === 0) {
-      alert(i18n.t('review.noWordsDueAlert', '目前沒有可複習的單字！'));
+      setSetupNotice(i18n.t('review.daily.noEligible'));
       return;
     }
 
-    const reviewBatch = buildReviewBatch(filteredWords, 10);
-    setReviewQueue(reviewBatch);
+    const now = new Date();
+    const latest = controller.getSnapshot().progress;
+    const today = reviewCalendarDate(now, latest.timezone);
+    const stats = dailyReviewStats(latest, today);
+    const size = kind === 'daily' && !stats.checkedIn ? Math.min(5, Math.max(0, Math.min(latest.goal, availableCount) - stats.completed)) : 5;
+    const { batch: reviewBatch } = planReview({ words: filteredWords, kind, size, now,
+      completedIds: latest.days[localDayKey(today)]?.words || [], goal: latest.goal,
+      newIntroduced: latest.days[localDayKey(today)]?.introduced?.length || 0 });
+    if (!reviewBatch.length) {
+      setSetupNotice(i18n.t('review.daily.noEligible'));
+      return;
+    }
+    sessionOwnerRef.current = progressKey;
+    ratedCardsRef.current = new Set();
+    advancedCardsRef.current = new Set();
+    setSessionKind(kind);
+    setSessionSummary(null);
+    setSetupNotice('');
+    setReviewQueue(reviewBatch.map(word => ({ ...word, reviewEntryIndex: Math.floor(Math.random() * Math.max(1, (word.selectedDefinitions || word.selected_definitions || []).length)) })));
     setCurrentCardIndex(0);
     setReviewMode(mode);
     setIsFlipped(false);
@@ -227,9 +200,11 @@ const useReview = ({
     setAnswerHint('');
     setHasMistake(false);
     setActiveTab('review_session');
-  }, [allFolderIds, buildReviewBatch, setActiveTab, vocabData]);
+  }, [allFolderIds, onlyStarred, progressKey, cloudReady, controller, setActiveTab, vocabData, availableCount, setReviewMode, setIsFlipped, setAnswerHint]);
 
   const advanceToNextCard = useCallback(() => {
+    if (advancedCardsRef.current.has(currentCardIndex)) return;
+    advancedCardsRef.current.add(currentCardIndex);
     if (pendingAutoGrade !== null) {
       processRatingRef.current?.(pendingAutoGrade, { advance: false });
       setPendingAutoGrade(null);
@@ -244,17 +219,17 @@ const useReview = ({
       setAnswerHint('');
       setHasMistake(false);
     } else {
-      alert(i18n.t('review.finish', '恭喜！本次複習已完成'));
+      setSessionSummary({ count: reviewQueue.length, kind: sessionKind });
       setActiveTab('review');
     }
-  }, [currentCardIndex, pendingAutoGrade, reviewQueue.length, setActiveTab]);
+  }, [currentCardIndex, pendingAutoGrade, reviewQueue.length, sessionKind, setActiveTab, setIsFlipped, setAnswerHint]);
 
   useEffect(() => {
     advanceToNextCardRef.current = advanceToNextCard;
   }, [advanceToNextCard]);
 
   const handleAdvanceKeyDown = useCallback((event) => {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && !event.repeat) {
       event.preventDefault();
       advanceToNextCard();
     }
@@ -289,6 +264,16 @@ const useReview = ({
       return;
     }
 
+    if (sessionOwnerRef.current !== progressKey || ratedCardsRef.current.has(currentCardIndex)) return;
+    const recordCompletion = () => {
+      ratedCardsRef.current.add(currentCardIndex);
+      saveProgress(value => recordReview(value, wordReviewId(currentWord), reviewCalendarDate(new Date(), value.timezone), isNewWord(currentWord) && sessionKind !== 'practice', availableCount));
+    };
+    if (sessionKind === 'practice') {
+      recordCompletion();
+      if (options.advance !== false) advanceToNextCardRef.current?.();
+      return;
+    }
     const prevScore = currentWord.proficiencyScore || 0;
     const now = new Date();
     const rating = grade <= 1 ? Rating.Again : grade === 2 ? Rating.Hard : grade === 3 ? Rating.Good : Rating.Easy;
@@ -297,15 +282,7 @@ const useReview = ({
     const nextCardRecord = schedulingCards[rating];
     const nextCard = nextCardRecord.card;
     const fsrsState = serializeFsrsCard(nextCard);
-    let nextReviewIso = fsrsState.due;
-    if (fsrsState.scheduled_days > 2) {
-      const nowMs = now.getTime();
-      const dueMs = new Date(fsrsState.due).getTime();
-      const fuzzFactor = 0.95 + Math.random() * 0.1;
-      const fuzzedMs = nowMs + (dueMs - nowMs) * fuzzFactor;
-      nextReviewIso = new Date(fuzzedMs).toISOString();
-      fsrsState.due = nextReviewIso;
-    }
+    const nextReviewIso = fsrsState.due;
 
     let scoreChange = grade - 3;
     let newScore = prevScore + scoreChange;
@@ -314,8 +291,9 @@ const useReview = ({
     newScore = Math.max(0, Math.min(5, newScore));
 
     updateWord(currentWord.id, { ...fsrsState, nextReview: nextReviewIso, proficiencyScore: newScore });
+    recordCompletion();
 
-    if (session) {
+    if (session && currentWord.libraryId != null) {
       const updatePayload = {
         ...fsrsState,
         next_review: nextReviewIso,
@@ -324,6 +302,7 @@ const useReview = ({
 
       updateUserLibraryProgress({ libraryId: currentWord.libraryId, payload: updatePayload }).then(({ error }) => {
         if (error && error.code === '42703') {
+          setSetupNotice(i18n.t('review.daily.syncError'));
           updateUserLibraryProgress({
             libraryId: currentWord.libraryId,
             payload: {
@@ -331,10 +310,11 @@ const useReview = ({
               proficiency_score: newScore
             }
           }).then(({ error: retryError }) => {
-            if (retryError) console.error("更新複習進度失敗:", retryError);
+            if (retryError) { console.error("更新複習進度失敗:", retryError); setSetupNotice(i18n.t('review.daily.syncError')); }
           });
         } else if (error) {
           console.error("更新複習進度失敗:", error);
+          setSetupNotice(i18n.t('review.daily.syncError'));
         }
       });
     }
@@ -343,7 +323,7 @@ const useReview = ({
     if (shouldAdvance) {
       advanceToNextCardRef.current?.();
     }
-  }, [currentCardIndex, fsrs, reviewQueue, session, setActiveTab, updateWord]);
+  }, [currentCardIndex, fsrs, reviewQueue, session, sessionKind, progressKey, saveProgress, setActiveTab, updateWord, availableCount]);
 
   useEffect(() => {
     processRatingRef.current = processRating;
@@ -414,7 +394,8 @@ const useReview = ({
     if (reviewMode !== 'flashcard') {
       if (isAwaitingNext) return;
       const autoGrade = finalIncorrect ? 1 : result.grade;
-      setPendingAutoGrade(autoGrade);
+      processRating(autoGrade, { advance: false });
+      setPendingAutoGrade(null);
       setIsAwaitingNext(true);
     }
     return normalizedResult;
@@ -422,11 +403,14 @@ const useReview = ({
     clozeExampleMain,
     currentCardIndex,
     hasMistake,
+    processRating,
     isAwaitingNext,
     reviewMode,
     reviewQueue,
     setActiveTab,
-    userAnswer
+    userAnswer,
+    setIsFlipped,
+    setAnswerHint
   ]);
 
   const handleReviewKeyDown = useCallback((event) => {
@@ -464,7 +448,7 @@ const useReview = ({
         event.preventDefault();
       }
     }
-  }, [checkAnswer, currentReviewWord?.word, isAwaitingNext, isFlipped, preferredReviewAudio, processRating, reviewMode]);
+  }, [checkAnswer, currentReviewWord, isAwaitingNext, isFlipped, preferredReviewAudio, processRating, reviewMode, playAudioShortcut, setIsFlipped]);
 
   useEffect(() => {
     if (activeTab !== 'review_session' || reviewQueue.length === 0) return;
@@ -480,10 +464,21 @@ const useReview = ({
       setIsAwaitingNext(false);
     }
     if (answerHint) setAnswerHint('');
-  }, [answerHint, feedback]);
+  }, [answerHint, feedback, setAnswerHint]);
 
   return {
     state: {
+      cloudStatus,
+      cloudReady,
+      anonymous,
+      dailyGoal: progress.goal,
+      dailyTarget: availableCount ? Math.min(progress.goal, availableCount) : progress.goal,
+      todayStats,
+      sessionSummary,
+      setupNotice,
+      reviewClock: clock,
+      todayIds,
+      newIntroduced: progress.days[localDayKey(calendarDate)]?.introduced?.length || 0,
       reviewQueue,
       currentCardIndex,
       reviewMode,
@@ -511,6 +506,9 @@ const useReview = ({
       selectedFolderLabel
     },
     actions: {
+      retryCloudSync: controller.flush,
+      setDailyGoal,
+      dismissSummary: () => setSessionSummary(null),
       setReviewSetupView,
       setSelectedReviewFolders,
       setOnlyStarred,

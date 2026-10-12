@@ -4,6 +4,20 @@ import { useTranslation } from 'react-i18next';
 import ReviewFoldersSelector from './ReviewFoldersSelector';
 
 const ReviewSetup = ({
+  cloudStatus,
+  cloudReady,
+  anonymous,
+  retryCloudSync,
+  dailyGoal,
+  dailyTarget,
+  setDailyGoal,
+  todayStats,
+  sessionSummary,
+  dismissSummary,
+  setupNotice,
+  dailyBatchCount,
+  newCount,
+  learnedCount,
   reviewSetupView,
   setReviewSetupView,
   dueCount,
@@ -21,6 +35,7 @@ const ReviewSetup = ({
 }) => {
   const { t } = useTranslation();
   const [showHint, setShowHint] = React.useState(false);
+  const [kind, setKind] = React.useState('daily');
 
   if (reviewSetupView === 'folders') {
     return (
@@ -64,16 +79,44 @@ const ReviewSetup = ({
           )}
         </div>
       </div>
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8 flex justify-around">
-        <div className="text-center">
-          <div className="text-3xl font-bold text-pink-600">{dueCount}</div>
-          <div className="text-sm text-gray-600">{t('review.dueCountLabel')}</div>
+      {sessionSummary && (
+        <section className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6" role="status">
+          <h2 className="font-bold text-green-800 text-lg">{t('review.daily.sessionDone', { count: sessionSummary.count })}</h2>
+          <p className="text-green-700 mt-2">{t(todayStats.checkedIn ? 'review.daily.checkedInDesc' : 'review.daily.keepGoing')}</p>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} disabled={!cloudReady || !dailyBatchCount} className="bg-green-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">{t('review.daily.continue')}</button>
+            <button onClick={dismissSummary} className="border border-green-300 rounded-lg px-4 py-2 text-green-800">{t('review.daily.stop')}</button>
+          </div>
+        </section>
+      )}
+      <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">{t(todayStats.checkedIn ? 'review.daily.checkedIn' : 'review.daily.title')}</h2>
+            <p className="text-sm text-gray-500 mt-1">{t('review.daily.goalDescription', { count: dailyTarget })}</p>
+          </div>
+          <label className="text-sm text-gray-600">
+            {t('review.daily.goal')}
+            <select disabled={!cloudReady} value={dailyGoal} onChange={e => setDailyGoal(Number(e.target.value))} className="block border border-gray-200 rounded-lg p-2 mt-1 bg-white">
+              {[5, 10, 20].map(count => <option key={count} value={count}>{t('review.daily.words', { count })}</option>)}
+            </select>
+          </label>
         </div>
-        <div className="text-center">
-          <div className="text-3xl font-bold text-blue-600">{totalWords}</div>
-          <div className="text-sm text-gray-600">{t('review.totalWords')}</div>
-        </div>
-      </div>
+        <div className="text-3xl font-bold text-blue-600 mt-5">{todayStats.completed} / {dailyTarget}</div>
+        <progress className="w-full h-3 mt-3 accent-blue-600" value={Math.min(todayStats.completed, dailyTarget)} max={Math.max(1, dailyTarget)} aria-label={t('review.daily.progress')} />
+        <p className="text-sm text-gray-600 mt-3">{t('review.daily.streak', { count: todayStats.streak })} · {t('review.daily.totalDays', { count: todayStats.totalDays })}</p>
+        <p className="text-xs text-gray-500 mt-1">{t('review.daily.bestStreak', { count: todayStats.bestStreak })}</p>
+        {cloudReady && !todayStats.checkedIn && dailyBatchCount > 0 && <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} className="w-full mt-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">{t('review.daily.start', { count: dailyBatchCount })}</button>}
+        <p role="status" className="text-xs text-gray-500 mt-2">{t(`review.daily.cloud.${cloudStatus}`)}</p>
+        {anonymous && <p className="text-xs text-gray-500 mt-1">{t('review.daily.anonymous')}</p>}
+        {cloudStatus === 'offline' && <button onClick={retryCloudSync} className="mt-2 text-sm text-blue-700 underline">{t('review.daily.retrySync')}</button>}
+      </section>
+      <details className="text-sm text-gray-500 mb-6">
+        <summary className="cursor-pointer">{t('review.daily.details')}</summary>
+        <p className="mt-2">{t('review.daily.detailCounts', { due: dueCount, fresh: newCount, total: totalWords })}</p>
+      </details>
+      {totalWords === 0 && <p className="bg-blue-50 rounded-xl p-4 mb-4 text-blue-800">{t('review.daily.empty')}</p>}
+      {setupNotice && <p role="status" className="bg-blue-50 rounded-xl p-4 mb-4 text-blue-800">{setupNotice}</p>}
 
       <button
         onClick={() => setReviewSetupView('folders')}
@@ -118,10 +161,23 @@ const ReviewSetup = ({
         </button>
       </div>
 
+      <fieldset className="mb-6">
+        <legend className="font-bold text-gray-700 mb-3">{t('review.daily.chooseTask')}</legend>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {['daily', 'practice', 'new'].map(option => (
+            <button type="button" key={option} aria-pressed={kind === option} onClick={() => setKind(option)} className={`text-left rounded-xl border p-3 ${kind === option ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}>
+              <span className="font-bold block">{t(`review.daily.kind.${option}`)}</span>
+              <span className="text-xs text-gray-500">{t(`review.daily.kindDesc.${option}`)}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <p className="text-sm text-gray-600 mb-3">{t(kind === 'practice' ? 'review.daily.practiceNote' : kind === 'new' ? 'review.daily.newNote' : 'review.daily.dailyNote', { count: dailyBatchCount })}</p>
       <h3 className="font-bold text-gray-700 mb-4">{t('review.selectMode')}</h3>
+
       <div className="grid grid-cols-1 gap-4">
         {reviewModes.map(mode => (
-          <button key={mode.id} onClick={() => startReview(selectedReviewFolders, mode.id)} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition text-left group">
+          <button key={mode.id} onClick={() => startReview(selectedReviewFolders, mode.id, kind)} disabled={!cloudReady || (kind === 'daily' ? !dailyBatchCount : kind === 'new' ? !newCount : !learnedCount)} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition text-left group disabled:opacity-50 disabled:cursor-not-allowed">
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-blue-100 group-hover:text-blue-600 transition"><mode.icon className="w-6 h-6" /></div>
             <div>
               <div className="font-bold text-gray-800">{mode.name}</div>

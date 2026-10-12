@@ -7,6 +7,7 @@ import { NavigationContext } from '../contexts/NavigationContext';
 import { PreferencesContext } from '../contexts/PreferencesContext';
 import ReviewSetup from '../components/review/ReviewSetup';
 import ReviewSession from '../components/review/ReviewSession';
+import { planReview, filterReviewWords } from '../utils/reviewPlanner';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -54,23 +55,19 @@ const ReviewPage = () => {
 
     const activeTab = navState.activeTab;
 
-    const filteredWords = useMemo(() => {
-        const { selectedReviewFolders, onlyStarred } = reviewState;
-        let words = libraryState.vocabData || [];
-        if (onlyStarred) {
-            words = words.filter(word => word.isStarred);
-        }
-        if (!selectedReviewFolders || selectedReviewFolders.includes('all')) {
-            return words;
-        }
-        return words.filter(word =>
-            word.folderIds && word.folderIds.some(id => selectedReviewFolders.includes(id))
-        );
-    }, [libraryState.vocabData, reviewState.selectedReviewFolders, reviewState.onlyStarred]);
+    const filteredWords = useMemo(() => filterReviewWords(libraryState.vocabData || [], {
+        folderIds: reviewState.selectedReviewFolders,
+        allFolderIds: libraryDerived?.index?.allFolderIds || [],
+        onlyStarred: reviewState.onlyStarred
+    }), [libraryState.vocabData, reviewState, libraryDerived]);
 
-    const dueCount = useMemo(() => {
-        return filteredWords.filter(word => new Date(word.nextReview) <= new Date()).length;
-    }, [filteredWords]);
+    const plan = useMemo(() => planReview({
+        words: filteredWords, now: reviewState.reviewClock,
+        completedIds: reviewState.todayIds, goal: reviewState.dailyGoal,
+        newIntroduced: reviewState.newIntroduced,
+        size: reviewState.todayStats.checkedIn ? 5 : Math.min(5, Math.max(0, reviewState.dailyTarget - reviewState.todayStats.completed))
+    }), [filteredWords, reviewState]);
+    const dueCount = plan.dueCount;
 
     const totalWords = filteredWords.length;
 
@@ -86,7 +83,7 @@ const ReviewPage = () => {
                 dueCount: stats?.dueCount || 0
             };
         });
-    }, [libraryState.folders, libraryDerived?.index?.statsByFolderId]);
+    }, [libraryState.folders, libraryDerived]);
 
     if (activeTab === 'review_session') {
         return (
@@ -110,6 +107,9 @@ const ReviewPage = () => {
             {...reviewDerived}
             {...reviewActions}
             dueCount={dueCount}
+            dailyBatchCount={plan.batch.length}
+            newCount={plan.newCount}
+            learnedCount={plan.learnedCount}
             totalWords={totalWords}
             sortedFolders={foldersWithStats}
             allFolderIds={libraryDerived?.index?.allFolderIds || []}

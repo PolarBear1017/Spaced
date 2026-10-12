@@ -386,6 +386,50 @@
         "name": "Dictation Mode",
         "desc": "Listen to pronunciation and spell"
       }
+    },
+    "daily": {
+      "title": "Today’s small goal",
+      "goalDescription": "Today’s goal is {{count}} unique words. Complete it to check in. A smaller library uses the number of available words as its goal.",
+      "goal": "Daily goal",
+      "words": "{{count}} words",
+      "progress": "Today’s learning progress",
+      "checkedIn": "Checked in today ✓",
+      "checkedInDesc": "Today’s goal is complete! More practice or a break — it’s your choice.",
+      "streak": "{{count}} day streak",
+      "totalDays": "{{count}} total check-ins",
+      "details": "Review details",
+      "detailCounts": "{{due}} due now · {{fresh}} not yet learned · {{total}} selected words",
+      "sessionDone": "You finished {{count}} words this round!",
+      "keepGoing": "Every step counts. Try another small round, or stop here today.",
+      "continue": "Review another small round",
+      "stop": "Stop here today",
+      "chooseTask": "Choose your practice",
+      "kind": {
+        "daily": "Daily review",
+        "practice": "Free practice",
+        "new": "Learn new words"
+      },
+      "kindDesc": {
+        "daily": "Due words come first",
+        "practice": "Practice learned words in your selection",
+        "new": "Start learning saved new words"
+      },
+      "practiceNote": "Free practice counts toward today’s goal without changing the schedule. Each word counts only once a day.",
+      "newNote": "Learn up to 5 new words per round. They will need future reviews. Your daily goal stays the same.",
+      "dailyNote": "{{count}} words in this round. At most 2 new words are added automatically per day, paused when the backlog is large.",
+      "noEligible": "No eligible words right now. Try another folder, free practice, or new words. You don’t need to clear the whole backlog today.",
+      "syncError": "This review is saved locally, but cloud progress was not fully synced. Check your connection and stay on this page before refreshing.",
+      "empty": "No words in this selection yet. Save some words or choose another folder to begin today’s practice.",
+      "bestStreak": "Best streak: {{count}} days",
+      "start": "Start this round · {{count}} words",
+      "cloud": {
+        "synced": "Synced to the cloud. Sign in to the same account to continue on another device.",
+        "syncing": "Syncing your daily goal and check-ins…",
+        "offline": "Cloud sync is pending. Progress is saved on this device and will retry when you reconnect.",
+        "local": "Sign in to save goals and check-ins in the cloud."
+      },
+      "anonymous": "You are using a guest account. Sign in to the same permanent account on both devices to share your streak.",
+      "retrySync": "Retry sync"
     }
   },
   "player": {
