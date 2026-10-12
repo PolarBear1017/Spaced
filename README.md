@@ -155,8 +155,8 @@ Traditional vocabulary tools often reduce learning to mindless memorization, lea
 
 ```bash
 # 複製專案庫 / Clone repository
-git clone https://github.com/PolarBear1017/English-Vocabulary-Web-App.git
-cd English-Vocabulary-Web-App
+git clone https://github.com/PolarBear1017/Spaced.git
+cd Spaced
 
 # 安裝依賴項 / Install dependencies
 npm install
