@@ -12,7 +12,7 @@ import { updateUserLibraryProgress } from '../../services/libraryService';
 import { speak, getAudioUrl } from '../../services/speechService';
 import i18n from '../../i18n/config';
 import useDailyReviewProgress from './useDailyReviewProgress';
-import { localDayKey, reviewCalendarDate, recordReview, changeDailyGoal, dailyReviewStats, planReview, wordReviewId, isNewWord, filterReviewWords } from '../../utils/reviewPlanner';
+import { localDayKey, reviewCalendarDate, recordReview, changeDailyGoal, dailyReviewStats, planReview, wordReviewId, isNewWord, filterReviewWords, reviewDailyTarget, recoveryProgress } from '../../utils/reviewPlanner';
 
 const useReview = ({
   vocabData,
@@ -48,6 +48,15 @@ const useReview = ({
   const setDailyGoal = useCallback(goal => saveProgress(value => changeDailyGoal(value, goal, reviewCalendarDate(new Date(), value.timezone), availableCount), true), [saveProgress, availableCount]);
   const calendarDate = reviewCalendarDate(clock, progress.timezone);
   const todayStats = dailyReviewStats(progress, calendarDate);
+  const recoveryInfo = recoveryProgress(progress, calendarDate);
+  const setRecoveryMode = useCallback(mode => {
+    const dayKey = localDayKey(reviewCalendarDate(new Date(), progress.timezone));
+    controller.update(value => {
+      const key = dayKey;
+      const day = value.days[key] || {words: [], introduced: [], checkedIn: false};
+      return {...value, days: {...value.days, [key]: {...day, recovery: mode === 'recovery', target: Math.max(1, Math.min(mode === 'recovery' ? 5 : value.goal, availableCount))}}};
+    }, false, {mode, day: dayKey});
+  }, [controller, availableCount, progress.timezone]);
   const todayIds = progress.days[localDayKey(calendarDate)]?.words || [];
   const [reviewQueue, setReviewQueue] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -175,10 +184,11 @@ const useReview = ({
     const latest = controller.getSnapshot().progress;
     const today = reviewCalendarDate(now, latest.timezone);
     const stats = dailyReviewStats(latest, today);
-    const size = kind === 'daily' && !stats.checkedIn ? Math.min(5, Math.max(0, Math.min(latest.goal, availableCount) - stats.completed)) : 5;
+    const size = kind === 'daily' && !stats.checkedIn ? Math.min(5, Math.max(0, reviewDailyTarget(latest, today, availableCount) - stats.completed)) : 5;
     const { batch: reviewBatch } = planReview({ words: filteredWords, kind, size, now,
       completedIds: latest.days[localDayKey(today)]?.words || [], goal: latest.goal,
-      newIntroduced: latest.days[localDayKey(today)]?.introduced?.length || 0 });
+      newIntroduced: latest.days[localDayKey(today)]?.introduced?.length || 0,
+      recovery: !!latest.days[localDayKey(today)]?.recovery });
     if (!reviewBatch.length) {
       setSetupNotice(i18n.t('review.daily.noEligible'));
       return;
@@ -472,8 +482,9 @@ const useReview = ({
       cloudReady,
       anonymous,
       dailyGoal: progress.goal,
-      dailyTarget: availableCount ? Math.min(progress.goal, availableCount) : progress.goal,
+      dailyTarget: availableCount ? reviewDailyTarget(progress, calendarDate, availableCount) : progress.goal,
       todayStats,
+      recoveryInfo,
       sessionSummary,
       setupNotice,
       reviewClock: clock,
@@ -508,6 +519,7 @@ const useReview = ({
     actions: {
       retryCloudSync: controller.flush,
       setDailyGoal,
+      setRecoveryMode,
       dismissSummary: () => setSessionSummary(null),
       setReviewSetupView,
       setSelectedReviewFolders,

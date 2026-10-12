@@ -8,6 +8,8 @@ const ReviewSetup = ({
   cloudReady,
   anonymous,
   retryCloudSync,
+  recoveryInfo,
+  setRecoveryMode,
   dailyGoal,
   dailyTarget,
   setDailyGoal,
@@ -79,6 +81,13 @@ const ReviewSetup = ({
           )}
         </div>
       </div>
+      {recoveryInfo.active && (
+        <section className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
+          <h2 className="font-bold text-blue-900">{t(todayStats.checkedIn ? 'review.support.recoveryDone' : 'review.support.welcome')}</h2>
+          <p className="text-sm text-blue-800 mt-2">{t(todayStats.checkedIn ? 'review.support.recoveryDoneDesc' : 'review.support.recoveryDesc', {count: dailyTarget})}</p>
+          <button onClick={() => setRecoveryMode('regular')} disabled={!cloudReady} className="text-blue-800 underline text-sm mt-3 disabled:opacity-50">{t('review.support.regular')}</button>
+        </section>
+      )}
       {sessionSummary && (
         <section className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6" role="status">
           <h2 className="font-bold text-green-800 text-lg">{t('review.daily.sessionDone', { count: sessionSummary.count })}</h2>
@@ -110,6 +119,13 @@ const ReviewSetup = ({
         <p role="status" className="text-xs text-gray-500 mt-2">{t(`review.daily.cloud.${cloudStatus}`)}</p>
         {anonymous && <p className="text-xs text-gray-500 mt-1">{t('review.daily.anonymous')}</p>}
         {cloudStatus === 'offline' && <button onClick={retryCloudSync} className="mt-2 text-sm text-blue-700 underline">{t('review.daily.retrySync')}</button>}
+      </section>
+      <section className="bg-white border border-gray-200 rounded-2xl p-4 mb-6">
+        <h2 className="font-bold text-gray-800">{t('review.support.protectionTitle')}</h2>
+        <p className="text-sm text-gray-600 mt-2">{t('review.support.remaining', {count: recoveryInfo.protectionRemaining})}</p>
+        <p className="text-xs text-gray-500 mt-2">{t('review.support.protectionRules')}</p>
+        {recoveryInfo.protectedYesterday && <p role="status" className="text-sm text-green-700 mt-2">{t('review.support.protectedYesterday')}</p>}
+        {!recoveryInfo.active && <button onClick={() => setRecoveryMode('recovery')} disabled={!cloudReady || todayStats.checkedIn} className="text-sm text-blue-700 underline mt-3 disabled:opacity-50">{t('review.support.gentle')}</button>}
       </section>
       <details className="text-sm text-gray-500 mb-6">
         <summary className="cursor-pointer">{t('review.daily.details')}</summary>
@@ -172,7 +188,7 @@ const ReviewSetup = ({
           ))}
         </div>
       </fieldset>
-      <p className="text-sm text-gray-600 mb-3">{t(kind === 'practice' ? 'review.daily.practiceNote' : kind === 'new' ? 'review.daily.newNote' : 'review.daily.dailyNote', { count: dailyBatchCount })}</p>
+      <p className="text-sm text-gray-600 mb-3">{t(kind === 'practice' ? 'review.daily.practiceNote' : kind === 'new' ? 'review.daily.newNote' : recoveryInfo.active ? 'review.support.recoveryNote' : 'review.daily.dailyNote', { count: dailyBatchCount })}</p>
       <h3 className="font-bold text-gray-700 mb-4">{t('review.selectMode')}</h3>
 
       <div className="grid grid-cols-1 gap-4">

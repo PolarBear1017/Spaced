@@ -430,6 +430,19 @@
       },
       "anonymous": "You are using a guest account. Sign in to the same permanent account on both devices to share your streak.",
       "retrySync": "Retry sync"
+    },
+    "support": {
+      "welcome": "Welcome back. Start gently today.",
+      "recoveryDesc": "Review {{count}} words to check in today. No automatic new words or catch-up requirement. Your regular daily goal stays saved.",
+      "regular": "Use my regular goal today",
+      "protectionTitle": "Streak protection",
+      "remaining": "{{count}} protections left this month",
+      "protectionRules": "2 per month, with no rollover. After a check-in, a single missed day is protected automatically. Consecutive missed days cannot chain protections. Protected days are not actual study days or check-ins.",
+      "protectedYesterday": "Yesterday was protected. Your earlier effort still counts.",
+      "gentle": "Take it easy today: review 5 words",
+      "recoveryNote": "{{count}} due words this round, with no automatic new words today. Extra practice and voluntary new words remain available.",
+      "recoveryDone": "Today’s recovery goal is complete!",
+      "recoveryDoneDesc": "Your regular goal is still saved. Take a break or keep practicing — it’s your choice."
     }
   },
   "player": {

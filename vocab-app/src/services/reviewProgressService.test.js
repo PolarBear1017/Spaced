@@ -24,3 +24,10 @@ describe('review progress API', () => {
     await expect(syncDailyReview({userId:'user',progress:{goal:10,timezone:'UTC',days:{}},pendingGoal:20})).rejects.toThrow('network failure');
   });
 });
+
+it('sends the optional recovery choice without changing the permanent goal', async () => {
+  getSession.mockResolvedValue({data:{session:{user:{id:'user'},access_token:'test-token'}}});
+  rpc.mockReturnValue({setHeader:vi.fn().mockResolvedValue({data:{goal:20,days:{}},error:null})});
+  await syncDailyReview({userId:'user',progress:{goal:20,timezone:'Asia/Taipei',days:{}},pendingGoal:null,pendingRecovery:{mode:'regular',day:'2026-10-13'}});
+  expect(rpc).toHaveBeenCalledWith('sync_daily_review',{p_days:{},p_goal:null,p_initial_goal:20,p_timezone:'Asia/Taipei',p_recovery_choice:'regular'});
+});

@@ -91,3 +91,43 @@ describe('daily goals and check-ins', () => {
     expect(normalizeDailyReview({ goal: -1, days: { bad: completedDay, '2026-10-12': { words: null } } })).toEqual({ goal: 10, days: {} });
   });
 });
+
+describe('streak protection and gentle recovery', () => {
+  it('bridges a protected day without counting it as another study day', () => {
+    const progress = normalizeDailyReview({days:{
+      '2026-10-10': completedDay,
+      '2026-10-11': {words:[], protected:true, checkedIn:false}
+    }});
+    expect(dailyReviewStats(progress, now)).toMatchObject({streak:1, bestStreak:1, totalDays:1});
+    expect(dailyReviewStats(progress, new Date(2026,9,13)).streak).toBe(0);
+  });
+  it('resumes a protected streak with a real check-in', () => {
+    const progress = normalizeDailyReview({days:{
+      '2026-10-10': completedDay,
+      '2026-10-11': {words:[], protected:true},
+      '2026-10-12': completedDay
+    }});
+    expect(dailyReviewStats(progress, now)).toMatchObject({streak:2, bestStreak:2, totalDays:2});
+  });
+  it('uses a five-word recovery target and preserves the regular goal', () => {
+    let progress = normalizeDailyReview({goal:20, days:{'2026-10-12':{words:[], recovery:true}}});
+    for(let i=0;i<5;i++) progress = recordReview(progress, String(i), now);
+    expect(progress.goal).toBe(20);
+    expect(progress.days['2026-10-12'].target).toBe(5);
+    expect(dailyReviewStats(progress, now).checkedIn).toBe(true);
+    progress = changeDailyGoal(progress, 10, now);
+    expect(progress.days['2026-10-12'].target).toBe(5);
+  });
+  it('does not automatically introduce new words during recovery', () => {
+    expect(planReview({words:[old('a'),fresh('b')], now, recovery:true}).batch.map(w=>w.id)).toEqual(['a']);
+    expect(planReview({words:[fresh('b')],now,kind:'new',recovery:true}).batch.map(w=>w.id)).toEqual(['b']);
+  });
+});
+
+
+it('does not award a check-in when an empty library changes its goal', () => {
+  const initial = normalizeDailyReview({goal:10,days:{'2026-10-12':{words:[],checkedIn:false,target:1}}});
+  const changed = changeDailyGoal(initial,5,now,0);
+  expect(changed.days['2026-10-12'].target).toBe(1);
+  expect(dailyReviewStats(changed,now).checkedIn).toBe(false);
+});

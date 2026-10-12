@@ -107,3 +107,34 @@ library entries. It checks merges, goal changes, future-date rejection, owner-on
 RLS and rejection of unauthenticated RPC calls. Do not run it against real users.
 
 The database migration and frontend deployment remain separate steps.
+
+## Streak protection and recovery
+
+`20261013010000_streak_protection_and_recovery.sql` adds server-owned protection
+and recovery fields. Each account gets two automatic protections per calendar
+month, with no rollover. Only one missed day immediately after a real check-in
+can be protected; shields cannot chain consecutive missed days. Protection starts
+at feature activation, and a genuine late completion supersedes the shield and
+returns that month's allowance. Protected days bridge streaks but never increase
+actual study/check-in totals or add a study day to the streak length.
+
+After at least three missed days since the last real check-in, today's recovery
+mode offers a five-word target (or the smaller library size), pauses automatic new
+words, and retains the permanent goal. Recovery choices are per-day, cloud-shared,
+and queued offline with the account calendar date, so yesterday's choice cannot
+change tomorrow's mode. Users can opt out for today or voluntarily select a gentler
+five-word day; extra practice remains available.
+
+The public `sync_daily_review` wrapper is security-definer with an explicit
+`auth.uid()` guard, empty search path, and user-filtered queries. Its original
+merge implementation is renamed `sync_daily_review_base` and is no longer directly
+callable by clients. Column grants prevent clients from allocating protection or
+changing server-owned recovery fields.
+`20261013010200_lock_review_support_history.sql` also removes the default client
+DELETE/TRUNCATE grants so monthly protection accounting cannot be erased through
+direct table requests; server-side Auth account deletion still cascades. Existing four-argument RPC clients remain
+compatible with the fifth optional `p_recovery_choice` argument.
+
+Run `supabase/tests/streak_protection_recovery.sql` on the disposable development
+users described above to verify monthly caps, refunding late check-ins, forbidden
+client writes, recovery completion and opt-out persistence. All fixtures roll back.

@@ -10,11 +10,13 @@ export default function useDailyReviewProgress(session) {
   const controller = useMemo(() => createReviewProgressSync({
     userId,
     initial: readJSON(progressKey, null),
-    pendingGoal: readJSON(pendingKey, null),
+    pendingGoal: typeof readJSON(pendingKey, null) === 'object' ? readJSON(pendingKey, null)?.goal ?? null : readJSON(pendingKey, null),
+    pendingRecovery: readJSON(pendingKey, null)?.recoveryChoice ?? null,
     remote: syncDailyReview,
-    persist: (progress, goal) => {
+    persist: (progress, goal, recoveryChoice) => {
+      const pending = recoveryChoice ? {goal, recoveryChoice} : goal;
       if (JSON.stringify(readJSON(progressKey, null)) !== JSON.stringify(progress)) writeJSON(progressKey, progress);
-      if (readJSON(pendingKey, null) !== goal) writeJSON(pendingKey, goal);
+      if (JSON.stringify(readJSON(pendingKey, null)) !== JSON.stringify(pending)) writeJSON(pendingKey, pending);
     }
   }), [userId, progressKey, pendingKey]);
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
@@ -27,7 +29,8 @@ export default function useDailyReviewProgress(session) {
     // Other tabs trigger an authoritative cloud refresh, not a stale overwrite.
     const storage = event => {
       if (event.key === progressKey || event.key === pendingKey) {
-        controller.ingest(readJSON(progressKey, null), readJSON(pendingKey, null));
+        const pending = readJSON(pendingKey, null);
+        controller.ingest(readJSON(progressKey, null), typeof pending === 'object' ? pending?.goal ?? null : pending, pending?.recoveryChoice ?? null);
       }
     };
     window.addEventListener('storage', storage);

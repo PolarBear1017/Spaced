@@ -91,3 +91,46 @@ describe('cloud daily review synchronization', () => {
     expect(localDayKey(reviewCalendarDate(instant, 'America/New_York'))).toBe('2026-10-12');
   });
 });
+
+describe('cloud-authoritative protection and recovery choices', () => {
+  it('does not allow cached flags to allocate protection', () => {
+    const remote = {goal:10, protectionRemaining:2, days:{'2026-10-13':{words:[],protected:false,recovery:false}}};
+    const cached = normalizeDailyReview({goal:10,protectionRemaining:0,days:{'2026-10-13':{words:[],protected:true,recovery:true}}});
+    const merged = mergeReviewProgress(remote,cached);
+    expect(merged.protectionRemaining).toBe(2);
+    expect(merged.days['2026-10-13'].protected).toBe(false);
+    expect(merged.days['2026-10-13'].recovery).toBe(false);
+  });
+  it('persists recovery choice independently of regular goal edits', async () => {
+    const {controller, remote, persist} = setup();
+    await controller.connect();
+    const day = localDayKey(reviewCalendarDate(new Date(),'Asia/Taipei'));
+    controller.update(p=>({...p,days:{[day]:{words:[],recovery:true,target:5}}}),false,{mode:'recovery',day});
+    await controller.flush();
+    expect(remote.mock.calls.at(-1)[0]).toMatchObject({pendingGoal:null,pendingRecovery:{mode:'recovery',day}});
+    expect(persist.mock.calls.at(-1)[2]).toBeNull();
+  });
+  it('does not apply yesterday’s offline opt-out to today', async () => {
+    const now = new Date();
+    const yesterday = reviewCalendarDate(now,'Asia/Taipei');
+    yesterday.setDate(yesterday.getDate()-1);
+    const {controller,remote} = setup({pendingRecovery:{mode:'regular',day:localDayKey(yesterday)}});
+    await controller.connect();
+    expect(remote.mock.calls[0][0].pendingRecovery).toBeUndefined();
+  });
+});
+
+
+it('ignores structurally identical recovery choices received from another tab', async () => {
+  const first = defer();
+  const remote = vi.fn().mockReturnValue(first.promise);
+  const day = localDayKey(reviewCalendarDate(new Date(),'Asia/Taipei'));
+  const choice = {mode:'regular',day};
+  const initial = {...cloud,days:{[day]:{words:[],recovery:false,target:10}}};
+  const {controller} = setup({initial,pendingRecovery:choice,remote});
+  const syncing = controller.connect();
+  controller.ingest(controller.getSnapshot().progress,null,{...choice});
+  first.resolve(controller.getSnapshot().progress);
+  await syncing;
+  expect(remote).toHaveBeenCalledTimes(1);
+});
