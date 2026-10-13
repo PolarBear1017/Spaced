@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ExternalLink, Volume2, Sparkles, ChevronDown, Languages, Loader2 } from 'lucide-react';
 import ProficiencyDots from '../common/ProficiencyDots';
+import WordUsefulness from '../common/WordUsefulness';
 import { getAudioUrl } from '../../services/speechService';
 import { useTranslation } from 'react-i18next';
 
@@ -217,6 +218,7 @@ const SearchResultHeader = ({
               </div>
             )}
           </h2>
+          <WordUsefulness word={searchResult.word} className="mt-2" />
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600">
             <span className="italic font-serif bg-white px-2 py-0.5 rounded border border-gray-200">{searchResult.pos}</span>
             <span>{searchResult.phonetic}</span>

@@ -1,4 +1,21 @@
 {
+  "usefulness": {
+    "settingsTitle": "單字實用程度",
+    "showIndicators": "顯示單字分級",
+    "learningGoal": "學習方向",
+    "goals": { "daily": "日常溝通", "work": "職場英文", "academic": "學術閱讀", "custom": "個人重點" },
+    "coreRange": "常用單字範圍",
+    "topWords": "字幕中最常用的 {{count}} 個單字",
+    "priorityWords": "我的重點單字（用逗號或換行分隔）",
+    "wordsPlaceholder": "appointment, deadline\nresearch\ncheck in",
+    "levels": { "core": "核心常用", "extended": "進階常用", "lessCommon": "較少見", "unknown": "尚未分級" },
+    "goalPriority": "{{goal}}・目標重點",
+    "personalPriority": "個人重點",
+    "rankDetail": "這個字在字幕中的常用程度排第 {{rank}} 名。",
+    "unknownDetail": "目前沒有這個字的分級資料，但它仍可能對你很有用。",
+    "goalDetail": "這個字與你的「{{goal}}」學習方向有關。",
+    "localPreference": "設定會自動儲存在這台裝置。"
+  },
   "common": {
     "save": "儲存",
     "cancel": "取消",

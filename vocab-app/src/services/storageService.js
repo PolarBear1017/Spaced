@@ -1,3 +1,5 @@
+import { normalizeUsefulnessSettings } from '../utils/wordUsefulness';
+
 const STORAGE_VERSION = 1;
 const STORAGE_KEYS = {
   version: 'vocab_storage_version',
@@ -126,7 +128,12 @@ const saveDefinitionLanguage = (value) => writeString(STORAGE_KEYS.definitionLan
 const loadPlayAudioShortcut = () => readString(STORAGE_KEYS.playAudioShortcut, 'Tab');
 const savePlayAudioShortcut = (value) => writeString(STORAGE_KEYS.playAudioShortcut, value);
 
+const loadWordUsefulness = () => normalizeUsefulnessSettings(readJSON('word_usefulness', null));
+const saveWordUsefulness = (value) => writeJSON('word_usefulness', normalizeUsefulnessSettings(value));
+
 export {
+  loadWordUsefulness,
+  saveWordUsefulness,
   STORAGE_VERSION,
   STORAGE_KEYS,
   ensureStorageVersion,

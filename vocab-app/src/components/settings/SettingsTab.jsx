@@ -8,6 +8,7 @@ import SettingsDictionary from './SettingsDictionary';
 import SettingsAudio from './SettingsAudio';
 import SettingsLanguage from './SettingsLanguage';
 import SettingsShortcuts from './SettingsShortcuts';
+import SettingsUsefulness from './SettingsUsefulness';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 
@@ -89,6 +90,7 @@ const SettingsTab = () => {
           {settingsView === 'shortcuts' && (
             <SettingsShortcuts />
           )}
+          {settingsView === 'usefulness' && <SettingsUsefulness />}
         </div>
       )}
     </div>

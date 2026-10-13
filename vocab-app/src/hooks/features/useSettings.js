@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ensureStorageVersion,
+  loadWordUsefulness,
+  saveWordUsefulness,
   loadGroqKey,
   loadRequestRetention,
   loadDictionaryPriority,
@@ -33,6 +35,10 @@ import {
 
 const useSettings = () => {
   const [settingsView, setSettingsView] = useState('main');
+  const [wordUsefulness, setWordUsefulness] = useState(() => loadWordUsefulness());
+  useEffect(() => {
+    saveWordUsefulness(wordUsefulness);
+  }, [wordUsefulness]);
   const [groqApiKey, setGroqApiKey] = useState(() => loadGroqKey());
   const [requestRetention, setRequestRetention] = useState(() => loadRequestRetention());
   const [dictionaryPriority, setDictionaryPriority] = useState(() => loadDictionaryPriority());
@@ -142,6 +148,7 @@ const useSettings = () => {
 
   return {
     state: {
+      wordUsefulness,
       settingsView,
       groqApiKey,
       requestRetention,
@@ -158,6 +165,7 @@ const useSettings = () => {
       authLoading
     },
     actions: {
+      setWordUsefulness,
       setSettingsView,
       setGroqApiKey,
       setRequestRetention,

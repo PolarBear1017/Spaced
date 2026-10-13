@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Info, Pencil, Search, Sparkles, Trash2, Volume2, Play, X, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProficiencyDots from '../common/ProficiencyDots';
+import WordUsefulness from '../common/WordUsefulness';
 import SearchResultEntries from '../search/SearchResultEntries';
 import { normalizeEntries } from '../../utils/data';
 import { useSettingsContext } from '../../contexts/SettingsContext';
@@ -144,6 +145,7 @@ const LibraryWordDetail = ({
                 <ProficiencyDots score={masteryLevel} />
               </div>
             </h2>
+            <WordUsefulness word={entry.word} className="mt-2" />
             {isPlaying && (
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full animate-pulse my-1">
                 <Play className="w-3 h-3 fill-current" />

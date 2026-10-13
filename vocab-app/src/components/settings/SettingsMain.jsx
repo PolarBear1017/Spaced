@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, User, Key, Brain, BookOpen, Volume2, Globe, Keyboard } from 'lucide-react';
+import { ArrowRight, User, Key, Brain, BookOpen, Volume2, Globe, Keyboard, Target } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const SettingsMain = ({
@@ -18,6 +18,13 @@ const SettingsMain = ({
     <>
       <h1 className="text-2xl font-bold mb-6">{t('settings.title')}</h1>
       <div className="space-y-4">
+        <button onClick={() => onSelectView('usefulness')} className="w-full bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between hover:bg-gray-50 transition">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700"><Target className="w-5 h-5" /></div>
+            <div className="font-bold text-gray-800">{t('usefulness.settingsTitle')}</div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-gray-300" />
+        </button>
         {/* 語言設定 */}
         <button
           onClick={() => onSelectView('language')}

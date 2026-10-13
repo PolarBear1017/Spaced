@@ -1,4 +1,5 @@
 import React from 'react';
+import WordUsefulness from '../common/WordUsefulness';
 import { Volume2, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { parseExampleItem, splitExampleLines } from '../../utils/data';
@@ -57,6 +58,7 @@ const ReviewCardBack = ({
                 )}
             </div>
             <div className="text-gray-500 font-serif italic">{currentReviewWord.pos} {currentReviewWord.phonetic}</div>
+            <WordUsefulness word={currentReviewWord.word} className="[&>summary]:justify-center" />
             <div className="space-y-4 text-left w-full">
                 {currentReviewEntries.map((entry, index) => (
                     <div key={`${entry.definition}-${index}`} className="bg-gray-50 p-4 rounded-lg">

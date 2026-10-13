@@ -1,4 +1,21 @@
 {
+  "usefulness": {
+    "settingsTitle": "Word Usefulness",
+    "showIndicators": "Show word ratings",
+    "learningGoal": "Learning focus",
+    "goals": { "daily": "Daily communication", "work": "Workplace English", "academic": "Academic reading", "custom": "Personal priorities" },
+    "coreRange": "Common word range",
+    "topWords": "{{count}} most common words in subtitles",
+    "priorityWords": "My priority words (separate with commas or new lines)",
+    "wordsPlaceholder": "appointment, deadline\nresearch\ncheck in",
+    "levels": { "core": "Core common", "extended": "Extended common", "lessCommon": "Less common", "unknown": "Not yet classified" },
+    "goalPriority": "{{goal}} · Focus word",
+    "personalPriority": "Personal priority",
+    "rankDetail": "This word ranks {{rank}} in subtitle usage.",
+    "unknownDetail": "No rating is available yet, but this word may still be useful to you.",
+    "goalDetail": "This word fits your {{goal}} learning focus.",
+    "localPreference": "Settings save automatically on this device."
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
