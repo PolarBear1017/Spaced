@@ -339,6 +339,7 @@
     "dueCount_other": "{{count}} words due",
     "dueCountLabel": "Due for Review",
     "totalWords": "Total Words",
+    "audioHintTitle": "Audio tips",
     "audioHint": "You can customize audio source order in Settings",
     "selectFolder": "Select Review Folders",
     "onlyStarred": "Starred Words Only",

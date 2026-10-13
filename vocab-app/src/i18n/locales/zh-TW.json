@@ -333,6 +333,7 @@
     "dueCount": "{{count}} 個單字待複習",
     "dueCountLabel": "待複習",
     "totalWords": "總單字量",
+    "audioHintTitle": "發音提示",
     "audioHint": "可以在設定頁面調整發音來源順序",
     "selectFolder": "選擇複習資料夾",
     "onlyStarred": "只複習星號單字",
