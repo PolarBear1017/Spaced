@@ -1,0 +1,11 @@
+# The frontend is deployed separately from Supabase.
+supabase/
+node_modules/
+**/node_modules/
+vocab-app/dist/
+.vscode/
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
