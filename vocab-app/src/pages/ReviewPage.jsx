@@ -66,7 +66,7 @@ const ReviewPage = () => {
         completedIds: reviewState.todayIds, goal: reviewState.dailyGoal,
         newIntroduced: reviewState.newIntroduced,
         recovery: reviewState.recoveryInfo.active,
-        size: reviewState.todayStats.checkedIn ? 5 : Math.min(5, Math.max(0, reviewState.dailyTarget - reviewState.todayStats.completed))
+        size: reviewState.todayStats.completed >= reviewState.dailyTarget ? 5 : Math.min(5, reviewState.dailyTarget - reviewState.todayStats.completed)
     }), [filteredWords, reviewState]);
     const dueCount = plan.dueCount;
 

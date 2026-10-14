@@ -38,6 +38,7 @@ const ReviewSetup = ({
 }) => {
   const { t } = useTranslation();
   const [kind, setKind] = React.useState('daily');
+  const goalReached = todayStats.completed >= dailyTarget;
 
   if (reviewSetupView === 'folders') {
     return (
@@ -82,9 +83,9 @@ const ReviewSetup = ({
       {sessionSummary && (
         <section className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6" role="status">
           <h2 className="font-bold text-green-800 text-lg">{t('review.daily.sessionDone', { count: sessionSummary.count })}</h2>
-          <p className="text-green-700 mt-2">{t(todayStats.checkedIn ? 'review.daily.checkedInDesc' : 'review.daily.keepGoing')}</p>
+          <p className="text-green-700 mt-2">{t('review.daily.sessionAdded', { count: sessionSummary.addedCount })}</p>
           <div className="flex flex-wrap gap-3 mt-4">
-            <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} disabled={!cloudReady || !dailyBatchCount} className="bg-green-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">{t('review.daily.continue')}</button>
+            {dailyBatchCount > 0 && <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} disabled={!cloudReady} className="bg-green-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">{t('review.daily.continue')}</button>}
             <button onClick={dismissSummary} className="border border-green-300 rounded-lg px-4 py-2 text-green-800">{t('review.daily.stop')}</button>
           </div>
         </section>
@@ -93,13 +94,19 @@ const ReviewSetup = ({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <h2 className="text-lg font-bold text-gray-800">{t(todayStats.checkedIn ? 'review.daily.checkedIn' : 'review.daily.title')}</h2>
+              <h2 className="text-lg font-bold text-gray-800">{t('review.daily.title')}</h2>
               <ReviewInfo label={t('review.daily.details')}>
                 <p>{t('review.daily.goalDescription', { count: dailyTarget })}</p>
+                <p>{t('review.daily.uniqueProgress')}</p>
+                <p>{t(recoveryInfo.active ? 'review.daily.recoveryGoalHint' : 'review.daily.goalImmediate')}</p>
                 <p>{t('review.daily.detailCounts', { due: dueCount, fresh: newCount, total: totalWords })}</p>
                 <p>{t('review.daily.totalDays', { count: todayStats.totalDays })}<br />{t('review.daily.bestStreak', { count: todayStats.bestStreak })}</p>
                 <p>{t(`review.daily.cloud.${cloudStatus}`)}</p>
                 {anonymous && <p>{t('review.daily.anonymous')}</p>}
+                <p>{t('review.support.remaining', { count: recoveryInfo.protectionRemaining })}</p>
+                <p>{t('review.support.protectionRules')}</p>
+                {recoveryInfo.protectedYesterday && <p>{t('review.support.protectedYesterday')}</p>}
+                {!recoveryInfo.active && <button onClick={() => setRecoveryMode('recovery')} disabled={!cloudReady || todayStats.checkedIn} className="text-blue-700 underline disabled:opacity-50">{t('review.support.gentle')}</button>}
               </ReviewInfo>
             </div>
           </div>
@@ -111,21 +118,23 @@ const ReviewSetup = ({
           </label>
         </div>
         <div className="text-3xl font-bold text-blue-600 mt-5">{todayStats.completed} / {dailyTarget}</div>
+        {todayStats.checkedIn && <p className="text-sm text-green-700 mt-2">{t('review.daily.checkedIn')}</p>}
+        {todayStats.checkedIn && !goalReached && <p role="status" className="text-sm text-gray-600 mt-1">{t('review.daily.checkInRetained')}</p>}
         <progress className="w-full h-3 mt-3 accent-blue-600" value={Math.min(todayStats.completed, dailyTarget)} max={Math.max(1, dailyTarget)} aria-label={t('review.daily.progress')} />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-gray-500">
           <span>{t('review.daily.streak', { count: todayStats.streak })}</span>
-          <div className="flex items-center gap-1">
-            <span>{t('review.support.protectionTitle')}</span>
-            <ReviewInfo label={t('review.support.protectionTitle')}>
-              <p>{t('review.support.remaining', { count: recoveryInfo.protectionRemaining })}</p>
-              <p>{t('review.support.protectionRules')}</p>
-              {recoveryInfo.protectedYesterday && <p className="text-green-700">{t('review.support.protectedYesterday')}</p>}
-              {!recoveryInfo.active && <button onClick={() => setRecoveryMode('recovery')} disabled={!cloudReady || todayStats.checkedIn} className="text-blue-700 underline disabled:opacity-50">{t('review.support.gentle')}</button>}
-            </ReviewInfo>
-          </div>
         </div>
-        {cloudReady && !todayStats.checkedIn && dailyBatchCount > 0 && <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} className="w-full mt-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">{t('review.daily.start', { count: dailyBatchCount })}</button>}
-        {(cloudStatus === 'offline' || cloudStatus === 'syncing') && (
+        {cloudReady && !goalReached && dailyBatchCount > 0 && <button onClick={() => { setKind('daily'); startReview(selectedReviewFolders, 'flashcard', 'daily'); }} className="w-full mt-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">{t('review.daily.start', { count: dailyBatchCount })}</button>}
+        {cloudReady && !goalReached && dailyBatchCount === 0 && totalWords > 0 && (
+          <div role="status" className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+            <p>{t('review.daily.queueEmpty')}</p>
+            <div className="flex flex-wrap gap-3 mt-3">
+              {learnedCount > 0 && <button onClick={() => { setKind('practice'); startReview(selectedReviewFolders, 'flashcard', 'practice'); }} className="rounded-lg bg-blue-600 px-4 py-2 text-white">{t('review.daily.kind.practice')}</button>}
+              {newCount > 0 && <button onClick={() => { setKind('new'); startReview(selectedReviewFolders, 'flashcard', 'new'); }} className="rounded-lg bg-blue-600 px-4 py-2 text-white">{t('review.daily.kind.new')}</button>}
+            </div>
+          </div>
+        )}
+        {(cloudStatus === 'offline' || (cloudStatus === 'syncing' && !cloudReady)) && (
           <div role="status" className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
             <p>{t(`review.daily.cloud.${cloudStatus}`)}</p>
             {cloudStatus === 'offline' && <button onClick={retryCloudSync} className="mt-2 text-sm text-blue-700 underline">{t('review.daily.retrySync')}</button>}

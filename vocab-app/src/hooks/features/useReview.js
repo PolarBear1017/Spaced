@@ -33,6 +33,7 @@ const useReview = ({
   const [sessionSummary, setSessionSummary] = useState(null);
   const [setupNotice, setSetupNotice] = useState('');
   const ratedCardsRef = useRef(new Set());
+  const roundProgressRef = useRef({ day: null, addedIds: new Set() });
   const advancedCardsRef = useRef(new Set());
   const sessionOwnerRef = useRef(progressKey);
   useEffect(() => {
@@ -45,7 +46,17 @@ const useReview = ({
     controller.update(transform, goalChanged);
     setClock(new Date());
   }, [controller]);
-  const setDailyGoal = useCallback(goal => saveProgress(value => changeDailyGoal(value, goal, reviewCalendarDate(new Date(), value.timezone), availableCount), true), [saveProgress, availableCount]);
+  const setDailyGoal = useCallback(goal => {
+    const value = controller.getSnapshot().progress;
+    const today = reviewCalendarDate(new Date(), value.timezone);
+    const day = localDayKey(today);
+    const recovery = value.days[day]?.recovery;
+    controller.update(current => {
+      const regular = recovery ? { ...current, days: { ...current.days, [day]: { ...current.days[day], recovery: false } } } : current;
+      return changeDailyGoal(regular, goal, today, availableCount);
+    }, true, recovery ? { mode: 'regular', day } : null);
+    setClock(new Date());
+  }, [controller, availableCount]);
   const calendarDate = reviewCalendarDate(clock, progress.timezone);
   const todayStats = dailyReviewStats(progress, calendarDate);
   const recoveryInfo = recoveryProgress(progress, calendarDate);
@@ -184,7 +195,8 @@ const useReview = ({
     const latest = controller.getSnapshot().progress;
     const today = reviewCalendarDate(now, latest.timezone);
     const stats = dailyReviewStats(latest, today);
-    const size = kind === 'daily' && !stats.checkedIn ? Math.min(5, Math.max(0, reviewDailyTarget(latest, today, availableCount) - stats.completed)) : 5;
+    const remaining = Math.max(0, reviewDailyTarget(latest, today, availableCount) - stats.completed);
+    const size = kind === 'daily' && remaining > 0 ? Math.min(5, remaining) : 5;
     const { batch: reviewBatch } = planReview({ words: filteredWords, kind, size, now,
       completedIds: latest.days[localDayKey(today)]?.words || [], goal: latest.goal,
       newIntroduced: latest.days[localDayKey(today)]?.introduced?.length || 0,
@@ -195,6 +207,7 @@ const useReview = ({
     }
     sessionOwnerRef.current = progressKey;
     ratedCardsRef.current = new Set();
+    roundProgressRef.current = { day: localDayKey(today), addedIds: new Set() };
     advancedCardsRef.current = new Set();
     setSessionKind(kind);
     setSessionSummary(null);
@@ -229,7 +242,8 @@ const useReview = ({
       setAnswerHint('');
       setHasMistake(false);
     } else {
-      setSessionSummary({ count: reviewQueue.length, kind: sessionKind });
+      const round = roundProgressRef.current;
+      setSessionSummary({ count: ratedCardsRef.current.size, addedCount: round.addedIds.size, day: round.day, kind: sessionKind });
       setActiveTab('review');
     }
   }, [currentCardIndex, pendingAutoGrade, reviewQueue.length, sessionKind, setActiveTab, setIsFlipped, setAnswerHint]);
@@ -277,7 +291,14 @@ const useReview = ({
     if (sessionOwnerRef.current !== progressKey || ratedCardsRef.current.has(currentCardIndex)) return;
     const recordCompletion = () => {
       ratedCardsRef.current.add(currentCardIndex);
-      saveProgress(value => recordReview(value, wordReviewId(currentWord), reviewCalendarDate(new Date(), value.timezone), isNewWord(currentWord) && sessionKind !== 'practice', availableCount));
+      saveProgress(value => {
+        const today = reviewCalendarDate(new Date(), value.timezone);
+        const day = localDayKey(today);
+        const id = wordReviewId(currentWord);
+        if (roundProgressRef.current.day !== day) roundProgressRef.current = { day, addedIds: new Set() };
+        if (!value.days[day]?.words.includes(id)) roundProgressRef.current.addedIds.add(id);
+        return recordReview(value, id, today, isNewWord(currentWord) && sessionKind !== 'practice', availableCount);
+      });
     };
     if (sessionKind === 'practice') {
       recordCompletion();
@@ -485,7 +506,7 @@ const useReview = ({
       dailyTarget: availableCount ? reviewDailyTarget(progress, calendarDate, availableCount) : progress.goal,
       todayStats,
       recoveryInfo,
-      sessionSummary,
+      sessionSummary: sessionSummary && { ...sessionSummary, addedCount: sessionSummary.day === localDayKey(calendarDate) ? sessionSummary.addedCount : 0 },
       setupNotice,
       reviewClock: clock,
       todayIds,
