@@ -14,6 +14,27 @@ function setup(options = {}) {
 }
 
 describe('cloud daily review synchronization', () => {
+  it('waits for the first cloud response even when the cache includes a timezone', async () => {
+    const first = defer();
+    const { controller } = setup({ remote: vi.fn(() => first.promise) });
+    expect(controller.getSnapshot().ready).toBe(false);
+    const connection = controller.connect();
+    expect(controller.getSnapshot().ready).toBe(false);
+    first.resolve({ ...cloud, goal: 20 });
+    await connection;
+    expect(controller.getSnapshot()).toMatchObject({ ready: true, progress: { goal: 20 } });
+  });
+
+  it('keeps initial failures unready and retains ready data during background failures', async () => {
+    const remote = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(cloud).mockRejectedValueOnce(new Error('offline'));
+    const { controller } = setup({ remote });
+    await controller.connect();
+    expect(controller.getSnapshot()).toMatchObject({ ready: false, status: 'offline' });
+    await controller.flush();
+    expect(controller.getSnapshot()).toMatchObject({ ready: true, status: 'synced' });
+    await controller.flush();
+    expect(controller.getSnapshot()).toMatchObject({ ready: true, status: 'offline' });
+  });
   it('merges independent device progress and preserves earned check-ins', () => {
     const a = { goal: 5, days: { '2026-10-13': { words: ['a', 'b'], introduced: ['a'], checkedIn: true } } };
     const b = { goal: 20, timezone: 'Asia/Taipei', days: { '2026-10-13': { words: ['b', 'c'], introduced: ['c'], checkedIn: false } } };

@@ -27,7 +27,8 @@ export function mergeReviewProgress(remote, local, preserveLocalGoal = false, pr
 // One serial, retryable stream per account. Local persistence is a cache/outbox;
 // the server merges sets under an account lock and returns authoritative goals.
 export function createReviewProgressSync({ initial, pendingGoal = null, pendingRecovery = null, userId, remote, persist }) {
-  let snapshot = { progress: normalizeDailyReview(initial), status: userId ? 'syncing' : 'local' };
+  let ready = !userId;
+  let snapshot = { progress: normalizeDailyReview(initial), status: userId ? 'syncing' : 'local', ready };
   let goal = [5, 10, 20].includes(pendingGoal) ? pendingGoal : null;
   let recoveryChoice = validRecoveryChoice(pendingRecovery, snapshot.progress);
   const dirtyDays = new Set(Object.keys(snapshot.progress.days));
@@ -41,7 +42,7 @@ export function createReviewProgressSync({ initial, pendingGoal = null, pendingR
   let active = false;
   const listeners = new Set();
   const publish = (progress, status) => {
-    snapshot = { progress, status };
+    snapshot = { progress, status, ready };
     for (const listener of listeners) listener();
   };
   const save = () => persist(snapshot.progress, goal, recoveryChoice);
@@ -59,6 +60,7 @@ export function createReviewProgressSync({ initial, pendingGoal = null, pendingR
           const outgoing = { ...sent, days: Object.fromEntries([...dirtyDays].map(day => [day, sent.days[day]])) };
           const response = await remote({ userId, progress: outgoing, pendingGoal: goal, ...(recoveryChoice !== null ? {pendingRecovery: recoveryChoice} : {}) });
           if (!active) return;
+          ready = true;
           repeat = version !== revision;
           const next = mergeReviewProgress(response, snapshot.progress, repeat && goal !== null, repeat && recoveryChoice !== null);
           if (!repeat) { goal = null; recoveryChoice = null; dirtyDays.clear(); }

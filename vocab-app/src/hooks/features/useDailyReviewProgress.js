@@ -42,5 +42,5 @@ export default function useDailyReviewProgress(session) {
       window.removeEventListener('storage', storage);
     };
   }, [controller, progressKey, pendingKey]);
-  return { ...snapshot, cloudReady: !userId || !!snapshot.progress.timezone, controller, progressKey, anonymous: !!session?.user?.is_anonymous };
+  return { ...snapshot, cloudReady: snapshot.ready, controller, progressKey, anonymous: !!session?.user?.is_anonymous };
 }

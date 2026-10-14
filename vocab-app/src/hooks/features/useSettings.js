@@ -50,6 +50,7 @@ const useSettings = () => {
   const [playAudioShortcut, setPlayAudioShortcut] = useState(() => loadPlayAudioShortcut());
 
   const [session, setSession] = useState(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -100,12 +101,15 @@ const useSettings = () => {
     getSession().then(({ data: { session } }) => {
       setSession(session);
       if (!session) {
-        signInAnonymously().catch(console.error);
+        signInAnonymously().catch(console.error).finally(() => setSessionReady(true));
+      } else {
+        setSessionReady(true);
       }
-    });
+    }).catch(() => setSessionReady(true));
 
     const { data: { subscription } } = onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) setSessionReady(true);
     });
 
     return () => subscription.unsubscribe();
@@ -160,6 +164,7 @@ const useSettings = () => {
       definitionLanguage,
       playAudioShortcut,
       session,
+      sessionReady,
       email,
       password,
       authLoading

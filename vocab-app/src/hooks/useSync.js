@@ -11,7 +11,12 @@ import { entryToWord } from '../utils/mapper';
 import i18n from '../i18n/config';
 
 const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, lastMutationTimeRef }) => {
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const userId = session?.user?.id || null;
+  const ownerRef = useRef(userId);
+  ownerRef.current = userId;
+  const [loadState, setLoadState] = useState({ userId: null, loaded: false, error: false });
+  const isDataLoaded = loadState.userId === userId && loadState.loaded;
+  const loadError = loadState.userId === userId && loadState.error;
   const isSyncing = useRef(false);
 
   const loadData = useCallback(async (userId) => {
@@ -19,6 +24,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
     try {
       const { data: dbFolders, error: folderError } = await fetchFolders(userId);
       if (folderError) throw folderError;
+      if (ownerRef.current !== userId) return false;
 
       const allFolders = [];
       if (dbFolders) allFolders.push(...dbFolders.map(f => ({ ...f, id: f.id?.toString(), words: [] })));
@@ -35,6 +41,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
 
       const { data, error } = await fetchUserLibrary(userId);
       if (error) throw error;
+      if (ownerRef.current !== userId) return false;
 
       if (data) {
         const loadedVocab = data.map(mapLibraryRowToWord);
@@ -83,11 +90,13 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
           return merged;
         });
       }
-      setIsDataLoaded(true);
+      setLoadState({ userId, loaded: true, error: false });
       return true;
     } catch (error) {
       console.error("Supabase 載入失敗:", error);
-      setIsDataLoaded(true);
+      if (ownerRef.current === userId) {
+        setLoadState(prev => ({ userId, loaded: prev.userId === userId && prev.loaded, error: true }));
+      }
       throw error;
     }
   }, [setFolders, setVocabData, syncLockRef, lastMutationTimeRef]);
@@ -96,7 +105,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
     if (session?.user?.id) {
       loadData(session.user.id).catch(() => { });
     } else {
-      setIsDataLoaded(true);
+      setLoadState({ userId: null, loaded: true, error: false });
     }
   }, [loadData, session?.user?.id]);
 
@@ -203,7 +212,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
 
   const handleManualSync = useCallback(() => {
     if (session?.user) {
-      setIsDataLoaded(false);
+      setLoadState({ userId: session.user.id, loaded: false, error: false });
       loadData(session.user.id)
         .then(() => alert(i18n.t('sync.syncComplete', '同步完成！')))
         .catch((error) => {
@@ -217,7 +226,8 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
 
   return {
     state: {
-      isDataLoaded
+      isDataLoaded,
+      loadError
     },
     actions: {
       loadData,

@@ -471,6 +471,11 @@
     "close": "關閉播放器"
   },
   "sync": {
+    "initialLoading": "Loading… 載入中",
+    "initialLoadingDescription": "正在同步單字庫與複習進度，請稍候…",
+    "initialFailed": "資料同步失敗",
+    "initialFailedDescription": "請確認網路連線後重試。",
+    "retry": "重新同步",
     "syncComplete": "同步完成！",
     "syncFailed": "同步失敗",
     "loginRequired": "請先登入才能同步資料！"

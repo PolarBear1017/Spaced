@@ -481,6 +481,11 @@
     "close": "Close player"
   },
   "sync": {
+    "initialLoading": "Loading…",
+    "initialLoadingDescription": "Syncing your library and review progress…",
+    "initialFailed": "Unable to sync data",
+    "initialFailedDescription": "Check your connection and try again.",
+    "retry": "Retry",
     "syncComplete": "Sync complete!",
     "syncFailed": "Sync failed",
     "loginRequired": "Please log in to sync data!"
