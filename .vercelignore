@@ -9,3 +9,5 @@ vocab-app/dist/
 **/.env
 **/.env.*
 !**/.env.example
+
+.test-tmp/

@@ -1,3 +1,4 @@
+import { compareRecentFolders } from '../../utils/folderActivity';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Check, Folder, Search, X, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,9 @@ const ReviewFoldersSelector = ({
 
     // 2. Sort
     switch (sortBy) {
+      case 'recent_desc':
+        result.sort(compareRecentFolders);
+        break;
       case 'name_asc':
         result.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hant'));
         break;
@@ -167,6 +171,7 @@ const ReviewFoldersSelector = ({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
+              <option value="recent_desc">{t('card.sortRecent')}</option>
               <option value="created_desc">{t('review.sortLatest')}</option>
               <option value="name_asc">{t('review.sortName')}</option>
               <option value="count_desc">{t('review.sortCount')}</option>

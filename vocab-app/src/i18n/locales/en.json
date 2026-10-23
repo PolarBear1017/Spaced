@@ -108,6 +108,7 @@
     "saveFailedToast": "Save failed, please try again",
     "editSavedDefinitions": "Edit saved definitions",
     "searchOrCreateFolder": "Search or create...",
+    "sortRecent": "Recent",
     "sortLatest": "Latest",
     "sortNameAsc": "Name A-Z",
     "inputFolderName": "Enter folder name...",

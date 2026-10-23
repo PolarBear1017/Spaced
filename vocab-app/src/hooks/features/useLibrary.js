@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { compareRecentFolders, libraryDataReducer } from '../../utils/folderActivity';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   loadCachedFolders,
   loadCachedVocab,
@@ -19,19 +20,18 @@ import useSync from '../useSync';
 import i18n from '../../i18n/config';
 
 const useLibrary = ({ session, apiKeys, definitionLanguage = 'zh-TW', showToast, onRequireApiKeys }) => {
-  const [folders, setFolders] = useState(() => loadCachedFolders());
-  const [vocabData, setVocabData] = useState(() => {
+  const [{ folders, vocabData }, dispatchData] = useReducer(libraryDataReducer, null, () => {
     const cached = loadCachedVocab();
-    if (!Array.isArray(cached)) return [];
-    return cached.map((word) => {
-      if (!word || typeof word !== 'object') return word;
-      if (word.source) return word;
-      if (word.isAiGenerated) {
-        return { ...word, source: 'Groq AI' };
-      }
-      return word;
-    });
+    return {
+      folders: loadCachedFolders(),
+      vocabData: (Array.isArray(cached) ? cached : []).map(word => word && !word.source && word.isAiGenerated
+        ? { ...word, source: 'Groq AI' } : word)
+    };
   });
+  const setFolders = useCallback(value => dispatchData({ field: 'folders', value }), []);
+  const setVocabData = useCallback(value => dispatchData({ field: 'vocabData', value }), []);
+  const mutateFolders = useCallback(value => dispatchData({ field: 'folders', value, modifiedAt: Date.now() }), []);
+  const mutateVocabData = useCallback(value => dispatchData({ field: 'vocabData', value, modifiedAt: Date.now() }), []);
   const [viewingFolderId, setViewingFolderId] = useState(null);
   const [story, setStory] = useState(null);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
@@ -56,11 +56,11 @@ const useLibrary = ({ session, apiKeys, definitionLanguage = 'zh-TW', showToast,
   const { actions: folderActions } = useFolderCRUD({
     session,
     folders,
-    setFolders,
+    setFolders: mutateFolders,
     viewingFolderId,
     setViewingFolderId,
     vocabData,
-    setVocabData,
+    setVocabData: mutateVocabData,
     lastMutationTimeRef
   });
 
@@ -68,7 +68,7 @@ const useLibrary = ({ session, apiKeys, definitionLanguage = 'zh-TW', showToast,
     session,
     folders,
     vocabData,
-    setVocabData,
+    setVocabData: mutateVocabData,
     showToast,
     pendingSavesRef,
     syncLockRef,
@@ -81,6 +81,8 @@ const useLibrary = ({ session, apiKeys, definitionLanguage = 'zh-TW', showToast,
   const sortedFolders = useMemo(() => {
     const copy = [...folders];
     switch (folderSortBy) {
+      case 'recent_desc':
+        return copy.sort(compareRecentFolders);
       case 'name_asc':
         return copy.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hant'));
       case 'count_desc':

@@ -1,3 +1,4 @@
+import { compareRecentFolders } from '../../utils/folderActivity';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Circle, FileText, Info, Plus, Search, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -107,6 +108,9 @@ const FolderSelectionList = ({
 
   const sortedFolders = useMemo(() => {
     let copy = [...(folders || [])];
+    if (folderSortBy === 'recent_desc') {
+      return copy.sort(compareRecentFolders);
+    }
     if (folderSortBy === 'name_asc') {
       copy.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hant'));
     } else {
@@ -347,6 +351,7 @@ const FolderSelectionList = ({
             value={folderSortBy}
             onChange={(e) => setFolderSortBy(e.target.value)}
           >
+            <option value="recent_desc">{t('card.sortRecent')}</option>
             <option value="created_desc">{t('card.sortLatest')}</option>
             <option value="name_asc">{t('card.sortNameAsc')}</option>
           </select>

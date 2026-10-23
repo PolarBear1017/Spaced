@@ -11,3 +11,5 @@ supabase/.branches/
 .env.*
 !.env.example
 !**/.env.example
+
+.test-tmp/

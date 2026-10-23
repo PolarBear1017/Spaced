@@ -106,6 +106,7 @@ const LibraryOverview = ({
               value={folderSortBy}
               onChange={(e) => setFolderSortBy(e.target.value)}
             >
+              <option value="recent_desc">{t('card.sortRecent')}</option>
               <option value="created_desc">{t('card.sortLatest')}</option>
               <option value="name_asc">{t('card.sortNameAsc')}</option>
               <option value="count_desc">{t('library.sortWordCount')}</option>
