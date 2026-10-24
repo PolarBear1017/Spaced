@@ -13,7 +13,6 @@ import i18n from '../i18n/config';
 
 const useWordStorage = ({
   session,
-  folders,
   vocabData,
   setVocabData,
   showToast,
@@ -38,21 +37,6 @@ const useWordStorage = ({
     const existingWord = vocabData.find(word => (word.word || '').toLowerCase() === (searchResult.word || '').toLowerCase());
 
     const normalizedSelectedDefinitions = Array.isArray(selectedDefinitions) ? selectedDefinitions : null;
-    const normalizeDefs = (defs) => {
-      if (!Array.isArray(defs)) return [];
-      return defs.map((def) => ({
-        definition: def?.definition || '',
-        translation: def?.translation || '',
-        example: def?.example || '',
-        pos: def?.pos || ''
-      }));
-    };
-    const sameDefinitions = () => {
-      const next = normalizeDefs(normalizedSelectedDefinitions);
-      const prev = normalizeDefs(existingWord?.selectedDefinitions || existingWord?.selected_definitions);
-      return JSON.stringify(next) === JSON.stringify(prev);
-    };
-
     const pendingKey = `${session?.user?.id || 'guest'}::${(searchResult.word || '').toLowerCase()}::${normalizedFolderIds.join(',')}`;
     if (pendingSavesRef.current.has(pendingKey)) return false;
     pendingSavesRef.current.add(pendingKey);
@@ -177,7 +161,7 @@ const useWordStorage = ({
         syncLockRef.current = Math.max(0, syncLockRef.current - 1);
       }
     }
-  }, [folders, pendingSavesRef, session, setVocabData, showToast, vocabData, syncLockRef, lastMutationTimeRef, isDataLoaded]);
+  }, [pendingSavesRef, session, setVocabData, showToast, vocabData, syncLockRef, lastMutationTimeRef, isDataLoaded]);
 
   const updateWordFolders = useCallback(async (word, folderIds) => {
     if (!word) return false;

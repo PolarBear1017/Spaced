@@ -38,7 +38,6 @@ const SearchResultCard = ({
   lastUsedFolderIds,
   onSaveWord,
   onUpdateWordFolders,
-  onRemoveWordFromFolder,
   onUpdateLastUsedFolderIds,
   onCreateFolder,
   syncLockRef,
@@ -73,6 +72,8 @@ const SearchResultCard = ({
   const defaultTipRef = useRef(null);
 
   useEffect(() => {
+    // A new result starts a separate save flow and must not retain draft UI state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveStep('idle');
     setSelectedEntryIndices(null);
     setIsSwitchingSource(false);
@@ -440,7 +441,8 @@ const SearchResultCard = ({
     searchResult,
     syncLockRef,
     lastMutationTimeRef,
-    isDataLoaded
+    isDataLoaded,
+    t
   ]);
 
   const applySavedSelection = useCallback(() => {
@@ -521,7 +523,7 @@ const SearchResultCard = ({
     } finally {
       setIsSwitchingSource(false);
     }
-  }, [onChangeSource, searchResult?.word]);
+  }, [onChangeSource, searchResult]);
 
   const handleChangeDefinitionLanguage = useCallback(async (lang) => {
     if (!lang || lang === definitionLanguage) return;

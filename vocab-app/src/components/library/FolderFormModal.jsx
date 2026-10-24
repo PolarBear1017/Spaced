@@ -15,6 +15,8 @@ const FolderFormModal = ({
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Keep the reusable modal in sync when the parent switches the edited folder.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(initialValues?.name || '');
     setDescription(initialValues?.description || '');
     setError('');

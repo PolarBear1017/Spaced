@@ -47,11 +47,13 @@ const callAi = async ({ groqKey, word, definition, words, promptType, targetLang
         if (errorJson?.error) {
           serverMessage = errorJson.error;
         }
-      } catch (_) {
+      } catch {
         try {
           const text = await error.context.text();
           if (text) serverMessage = text;
-        } catch (_) {}
+        } catch {
+          // The response body may already have been consumed.
+        }
       }
     }
     const err = new Error(serverMessage || 'AI Edge Function failed');
@@ -209,9 +211,9 @@ const normalizeMnemonic = (data) => {
 
   let structuredData = data;
   if (typeof data === 'string' && data.trim().startsWith('{')) {
-    try { structuredData = JSON.parse(data); } catch (e) { }
+    try { structuredData = JSON.parse(data); } catch { /* Keep the original text. */ }
   } else if (data.mnemonics && typeof data.mnemonics === 'string' && data.mnemonics.trim().startsWith('{')) {
-    try { structuredData = JSON.parse(data.mnemonics); } catch (e) { }
+    try { structuredData = JSON.parse(data.mnemonics); } catch { /* Keep the original text. */ }
   }
 
   const details = getStructuredDetails(structuredData);

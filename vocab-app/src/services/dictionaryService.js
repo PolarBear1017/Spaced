@@ -226,7 +226,9 @@ const fetchRelatedWords = async (word, options = {}) => {
         if (mlRes.ok) {
           synData = await mlRes.json();
         }
-      } catch (_) {}
+      } catch {
+        // Continue with the dictionary response when related-word lookup fails.
+      }
     }
 
     if (Array.isArray(synData)) {

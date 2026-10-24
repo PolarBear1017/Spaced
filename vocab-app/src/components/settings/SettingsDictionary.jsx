@@ -99,6 +99,8 @@ const SettingsDictionary = () => {
     const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
+        // Reset unsaved controls if settings are refreshed outside this panel.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPriority(state.dictionaryPriority || []);
     }, [state.dictionaryPriority]);
 

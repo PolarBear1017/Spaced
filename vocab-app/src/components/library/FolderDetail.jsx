@@ -1,11 +1,8 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, ArrowUpDown, Folder, Volume2, Trash2, Book, Pencil, Check, Search, X, Play, Square, Pause } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft, ArrowUpDown, Folder, Trash2, Book, Pencil, Search, X, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useVocabularyPlayer } from '../../hooks/useVocabularyPlayer';
-import ProficiencyDots from '../common/ProficiencyDots';
-import { formatDate } from '../../utils/data';
 import { speak } from '../../services/speechService';
-import { useLongPress } from 'use-long-press';
 import LibraryWordDetail from './LibraryWordDetail';
 import { isWordMatch } from '../../utils/data';
 import WordRow from './WordRow';
@@ -62,8 +59,6 @@ const FolderDetail = ({
   const {
     isPlaying,
     currentWord,
-    startPlayback,
-    stopPlayback,
     closePlayer,
     togglePlayback,
     playNext,
@@ -74,6 +69,8 @@ const FolderDetail = ({
   // Sync player word with viewing word
   useEffect(() => {
     if (isPlaying && currentWord) {
+      // The player owns currentWord; mirror it so detail navigation retains the last played word.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewingWord(currentWord);
     }
   }, [isPlaying, currentWord]);

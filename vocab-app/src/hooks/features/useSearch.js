@@ -68,6 +68,8 @@ const useSearch = ({ apiKeys, settings, definitionLanguage: propDefLang, onSearc
   }, [searchResult]);
 
   useEffect(() => {
+    // Feedback belongs to the currently displayed result.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveButtonFeedback(false);
   }, [searchResult?.word]);
 
@@ -79,6 +81,8 @@ const useSearch = ({ apiKeys, settings, definitionLanguage: propDefLang, onSearc
 
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery || normalizedQuery.length < 2) {
+      // Clear stale suggestions immediately when the query is no longer searchable.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       return;
     }
@@ -200,7 +204,7 @@ const useSearch = ({ apiKeys, settings, definitionLanguage: propDefLang, onSearc
     } finally {
       setAiLoading(false);
     }
-  }, [apiKeys?.groqKey, definitionLanguage]);
+  }, [apiKeys, definitionLanguage]);
 
   const triggerWordRelations = useCallback(async (word, existingFamily = null, existingSimilar = []) => {
     if (!word || word.trim().length < 2) return;
@@ -375,7 +379,7 @@ const useSearch = ({ apiKeys, settings, definitionLanguage: propDefLang, onSearc
       setIsSearching(false);
       setIsAiLoading(false);
     }
-  }, [apiKeys, createSourceFallback, onRequireApiKeys, onSearchStart, settings?.state?.dictionaryPriority, updateSearchHistory, relatedContext, definitionLanguage, triggerAutoMnemonic]);
+  }, [apiKeys, createSourceFallback, onRequireApiKeys, onSearchStart, settings, updateSearchHistory, relatedContext, definitionLanguage, triggerAutoMnemonic, triggerWordRelations]);
 
   const handleSearch = useCallback(async (e, targetLangOverride) => {
     if (e && e.preventDefault) e.preventDefault();

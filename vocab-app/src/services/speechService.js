@@ -59,7 +59,7 @@ const stopAudio = () => {
     try {
       currentSource.stop();
       if (currentSource.onended) currentSource.onended = null; // Prevent callback
-    } catch (e) {
+    } catch {
       // Ignore errors if already stopped
     }
     currentSource = null;
@@ -72,7 +72,7 @@ const stopAudio = () => {
       currentAudioElement.currentTime = 0;
       currentAudioElement.onended = null; // Prevent callback
       currentAudioElement.onerror = null;
-    } catch (e) {
+    } catch {
       // Ignore errors
     }
     currentAudioElement = null;

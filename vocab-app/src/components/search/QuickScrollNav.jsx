@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUp, BookOpen, Layers, Sparkles } from 'lucide-react';
 
@@ -9,7 +9,7 @@ const QuickScrollNav = ({ hasMnemonic = true, hasRelations = true }) => {
   const isClickScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
 
-  const navItems = [
+  const navItems = useMemo(() => [
     {
       id: 'top',
       targetId: 'search-section-header',
@@ -46,7 +46,7 @@ const QuickScrollNav = ({ hasMnemonic = true, hasRelations = true }) => {
           }
         ]
       : [])
-  ];
+  ], [hasMnemonic, hasRelations]);
 
   // 滾動監聽 (Scrollspy) - 視線焦點線 (視窗上方 35%) + 頂部/底部保護
   useEffect(() => {

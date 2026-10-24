@@ -1,6 +1,6 @@
 import { loadFolderPickerSortBy, saveFolderPickerSortBy } from '../../services/storageService';
 import { compareRecentFolders } from '../../utils/folderActivity';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Circle, FileText, Info, Plus, Search, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -50,6 +50,13 @@ const FolderSelectionList = ({
   const initialSelected = useMemo(() => {
     const combined = new Set();
 
+    if (Array.isArray(initialSelectedIds)) {
+      initialSelectedIds.forEach(id => {
+        const strId = id?.toString();
+        if (strId) combined.add(strId);
+      });
+    }
+
     // Add saved folders (Green)
     if (savedIdSet.size > 0) {
       savedIdSet.forEach(id => combined.add(id));
@@ -65,7 +72,7 @@ const FolderSelectionList = ({
 
     // Filter by valid folders
     return Array.from(combined).filter((id) => validFolderIdSet.has(id));
-  }, [lastUsedFolderIds, savedIdSet, validFolderIdSet]);
+  }, [initialSelectedIds, lastUsedFolderIds, savedIdSet, validFolderIdSet]);
 
   const [selectedIds, setSelectedIds] = useState(() => new Set(initialSelected));
 
@@ -209,7 +216,7 @@ const FolderSelectionList = ({
     return false;
   }, [savedIdSet, selectedIds]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!onConfirm || isConfirming || confirmLockRef.current) return;
     confirmLockRef.current = true;
     const selected = Array.from(selectedIds).filter((id) => validFolderIdSet.has(id));
@@ -228,7 +235,7 @@ const FolderSelectionList = ({
       setIsConfirming(false);
       confirmLockRef.current = false;
     }
-  };
+  }, [isConfirming, onConfirm, savedIdSet, searchWord, selectedIds, validFolderIdSet]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

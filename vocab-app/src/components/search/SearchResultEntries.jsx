@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Volume2, Trash2, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { parseExampleItem, splitExampleLines } from '../../utils/data';
+import { parseExampleItem } from '../../utils/data';
 import { highlightWord, highlightWithCollocation } from '../../utils/text.jsx';
 import { speak } from '../../services/speechService';
 import { useSettingsContext } from '../../contexts/SettingsContext';

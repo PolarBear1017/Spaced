@@ -25,18 +25,17 @@ const LibraryWordDetail = ({
   const [preferredAccent, setPreferredAccent] = useState('us');
   const [tipOpen, setTipOpen] = useState(false);
   const tipRef = useRef(null);
-  const selectedDefs = Array.isArray(entry?.selectedDefinitions)
-    ? entry.selectedDefinitions
-    : (Array.isArray(entry?.selected_definitions)
-      ? entry.selected_definitions
-      : []);
-
   const entries = useMemo(() => {
+    const selectedDefs = Array.isArray(entry?.selectedDefinitions)
+      ? entry.selectedDefinitions
+      : (Array.isArray(entry?.selected_definitions)
+        ? entry.selected_definitions
+        : []);
     if (selectedDefs.length > 0) {
       return normalizeEntries({ entries: selectedDefs });
     }
     return normalizeEntries(entry || {});
-  }, [entry, selectedDefs]);
+  }, [entry]);
 
   const { state: settingsState } = useSettingsContext();
   const playAudioShortcut = settingsState?.playAudioShortcut || 'Tab';
@@ -78,7 +77,7 @@ const LibraryWordDetail = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasNextWord, hasPrevWord, onNextWord, onPrevWord, entry?.word, preferredAudio, onSpeak]);
+  }, [hasNextWord, hasPrevWord, onNextWord, onPrevWord, entry?.word, preferredAudio, onSpeak, playAudioShortcut]);
 
   useEffect(() => {
     if (!tipOpen) return;

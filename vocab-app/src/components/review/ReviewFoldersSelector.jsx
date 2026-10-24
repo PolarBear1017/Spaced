@@ -60,8 +60,7 @@ const ReviewFoldersSelector = ({
   const {
     selectedIds,
     setSelection,
-    toggleSelection,
-    clearSelection
+    toggleSelection
   } = useSelection();
 
   // Sync props to internal state only on mount

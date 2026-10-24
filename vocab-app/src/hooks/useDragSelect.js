@@ -68,14 +68,14 @@ const useDragSelect = ({ enabled, onSelect, onToggle }) => {
     }
   }, [getViewportBounds, onSelect]);
 
-  const tickAutoScroll = useCallback(() => {
+  const tickAutoScroll = useCallback(function tick() {
     if (!isDraggingRef.current || scrollSpeedRef.current === 0) {
       stopAutoScroll();
       return;
     }
     window.scrollBy({ top: scrollSpeedRef.current });
     selectAtPoint();
-    rafIdRef.current = requestAnimationFrame(tickAutoScroll);
+    rafIdRef.current = requestAnimationFrame(tick);
   }, [selectAtPoint, stopAutoScroll]);
 
   const restorePageState = useCallback(() => {
@@ -184,7 +184,7 @@ const useDragSelect = ({ enabled, onSelect, onToggle }) => {
       restorePageState();
     }
     stopAutoScroll();
-  }, [restorePageState]);
+  }, [restorePageState, stopAutoScroll]);
 
   if (!enabled) {
     return { dragHandleProps: {} };

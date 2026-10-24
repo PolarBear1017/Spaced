@@ -89,7 +89,7 @@ const parseExampleItem = (example) => {
 
   // Auto-detect Cambridge legacy pattern: "<collocation> <Sentence containing collocation>"
   // Handles legacy strings like "sheer hell Work is sheer hell at the moment."
-  const match = str.match(/^([a-z0-9\s'’\-\(\)]+?)\s+((?:["'‘“\s]*)[A-Z][\s\S]*)$/);
+  const match = str.match(/^([a-z0-9\s'’\-()]+?)\s+((?:["'‘“\s]*)[A-Z][\s\S]*)$/);
   if (match) {
     const prefix = match[1].trim();
     const restSentence = match[2].trim();

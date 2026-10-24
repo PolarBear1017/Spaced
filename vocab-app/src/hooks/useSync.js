@@ -14,11 +14,14 @@ import { supabase } from '../supabase';
 const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, lastMutationTimeRef }) => {
   const userId = session?.user?.id || null;
   const ownerRef = useRef(userId);
-  ownerRef.current = userId;
   const [loadState, setLoadState] = useState({ userId: null, loaded: false, error: false });
   const isDataLoaded = loadState.userId === userId && loadState.loaded;
   const loadError = loadState.userId === userId && loadState.error;
   const isSyncing = useRef(false);
+
+  useEffect(() => {
+    ownerRef.current = userId;
+  }, [userId]);
 
   const loadData = useCallback(async (userId) => {
     const fetchStartTime = Date.now();
@@ -106,6 +109,8 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
     if (session?.user?.id) {
       loadData(session.user.id).catch(() => { });
     } else {
+      // Logged-out mode is immediately ready because there is no cloud data to fetch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadState({ userId: null, loaded: true, error: false });
     }
   }, [loadData, session?.user?.id]);
@@ -158,7 +163,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
       window.removeEventListener('focus', handleFocusOrVisible);
       document.removeEventListener('visibilitychange', handleFocusOrVisible);
     };
-  }, [loadData, session, syncLockRef]);
+  }, [lastMutationTimeRef, loadData, session, syncLockRef]);
 
   const syncLocalWords = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -190,7 +195,7 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
             source: word.source,
             isAiGenerated: Boolean(word.isAiGenerated)
           }).catch((error) => {
-            if (error?.message?.includes('column \"source\"')) return;
+            if (error?.message?.includes('column "source"')) return;
             console.warn('同步來源失敗', error);
           });
         }

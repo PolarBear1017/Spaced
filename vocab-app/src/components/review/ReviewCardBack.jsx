@@ -2,7 +2,7 @@ import React from 'react';
 import WordUsefulness from '../common/WordUsefulness';
 import { Volume2, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { parseExampleItem, splitExampleLines } from '../../utils/data';
+import { parseExampleItem } from '../../utils/data';
 import { highlightWord, highlightWithCollocation } from '../../utils/text';
 
 

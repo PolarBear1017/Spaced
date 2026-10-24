@@ -10,7 +10,7 @@ const normalizeSelectedDefinitions = (raw) => {
     try {
       const parsed = JSON.parse(trimmed);
       return Array.isArray(parsed) ? parsed : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

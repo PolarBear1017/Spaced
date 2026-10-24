@@ -91,17 +91,14 @@ const SettingsAudio = () => {
     const state = context?.state || {};
     const actions = context?.actions || {};
 
-    // Safety check: logging to debug blank screen issues if any
-    useEffect(() => {
-        console.log('SettingsAudio mounted. State:', state);
-    }, []);
-
     const [priority, setPriority] = useState(state.audioSourcePriority || []);
     const [audioSpeed, setAudioSpeed] = useState(state.audioSpeed || 1.0);
     const [chineseAudioSpeed, setChineseAudioSpeed] = useState(state.chineseAudioSpeed || 1.0);
     const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
+        // Reset unsaved controls if settings are refreshed outside this panel.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPriority(state.audioSourcePriority || []);
         setAudioSpeed(state.audioSpeed || 1.0);
         setChineseAudioSpeed(state.chineseAudioSpeed || 1.0);

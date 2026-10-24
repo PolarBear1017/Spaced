@@ -57,13 +57,14 @@ describe('AI request authentication', () => {
 });
 
 describe('Edge Function user verification', () => {
-  it.each([null, 'Basic token', 'Bearer sb_publishable_test', 'Bearer sb_secret_test'])
-    ('rejects missing or non-user credentials: %s', async (authorization) => {
+  it.each([null, 'Basic token', 'Bearer sb_publishable_test', 'Bearer sb_secret_test'])(
+    'rejects missing or non-user credentials: %s', async (authorization) => {
       const getUser = vi.fn();
       const req = new Request('https://example.test', { headers: authorization ? { Authorization: authorization } : {} });
       expect(await hasAuthenticatedUser(req, { auth: { getUser } })).toBe(false);
       expect(getUser).not.toHaveBeenCalled();
-    });
+    }
+  );
 
   it.each([false, true])('accepts a verified user, including anonymous=%s', async (isAnonymous) => {
     const getUser = vi.fn().mockResolvedValue({ data: { user: { id: 'user-id', is_anonymous: isAnonymous } }, error: null });

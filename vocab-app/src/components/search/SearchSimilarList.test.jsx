@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import SearchSimilarList from './SearchSimilarList';
 import { renderToStaticMarkup } from 'react-dom/server';
 

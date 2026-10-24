@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,12 +10,17 @@ const MoveWordsModal = ({
   isSaving
 }) => {
   const { t } = useTranslation();
-  const availableFolders = (folders || []).filter(folder => folder.id !== currentFolderId);
+  const availableFolders = useMemo(
+    () => (folders || []).filter(folder => folder.id !== currentFolderId),
+    [currentFolderId, folders]
+  );
   const [targetId, setTargetId] = useState(availableFolders[0]?.id || '');
 
   useEffect(() => {
+    // Reset the destination when the source folder changes while this modal is open.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTargetId(availableFolders[0]?.id || '');
-  }, [currentFolderId, folders]);
+  }, [availableFolders]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">

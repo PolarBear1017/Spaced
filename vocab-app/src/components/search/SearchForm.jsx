@@ -16,6 +16,7 @@ const SearchForm = ({
   playAudioShortcut = 'Tab'
 }) => {
   const { t } = useTranslation();
+  const userNavigatedRef = React.useRef(false);
   const suggestionOptions = suggestions.map((s) => (
     typeof s === 'string'
       ? { word: s, isHistory: false, matchType: null }
@@ -28,6 +29,10 @@ const SearchForm = ({
   const hasSuggestions = suggestionOptions.length > 0;
   const hasHistory = suggestionOptions.some((item) => item.isHistory);
   const trimmedQuery = query.trim();
+
+  React.useEffect(() => {
+    userNavigatedRef.current = false;
+  }, [suggestions]);
 
   const renderHighlightedWord = (word) => {
     if (!trimmedQuery) return word;
@@ -57,13 +62,6 @@ const SearchForm = ({
       className="relative"
     >
       {({ activeOption, open }) => {
-        const userNavigatedRef = React.useRef(false);
-
-        // Reset navigation state when suggestions open/close or options change
-        React.useEffect(() => {
-          userNavigatedRef.current = false;
-        }, [open, suggestions]);
-
         const handleKeyDown = (e) => {
           const targetKey = (playAudioShortcut || 'Tab').toLowerCase();
           if (e.key.toLowerCase() === targetKey && onTabAudio) {

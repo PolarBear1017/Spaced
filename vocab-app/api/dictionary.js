@@ -22,7 +22,7 @@ const translateToEnglish = async (text) => {
           data = await response.json();
           break;
         }
-      } catch (err) {
+      } catch {
         // try next client
       }
     }

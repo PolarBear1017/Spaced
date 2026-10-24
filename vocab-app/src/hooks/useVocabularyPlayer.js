@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { speak, stopAudio, getAudioUrl, subscribe } from '../services/speechService';
 import { normalizeEntries } from '../utils/data';
 import { useSettingsContext } from '../contexts/SettingsContext';
@@ -10,7 +10,10 @@ export const useVocabularyPlayer = (words = [], options = {}) => {
     const { state: { audioSourcePriority, audioSpeed, chineseAudioSpeed, definitionLanguage } } = useSettingsContext();
 
     // Default priority or from settings
-    const audioPriority = audioSourcePriority || options.audioPriority || ['us', 'uk', 'google', 'yahoo', 'general'];
+    const audioPriority = useMemo(
+        () => audioSourcePriority || options.audioPriority || ['us', 'uk', 'google', 'yahoo', 'general'],
+        [audioSourcePriority, options.audioPriority]
+    );
 
     const timeoutRef = useRef(null);
     const currentWordRef = useRef(null);
@@ -110,7 +113,7 @@ export const useVocabularyPlayer = (words = [], options = {}) => {
                 timeoutRef.current = setTimeout(() => speakDefinition(word), 500);
             }
         });
-    }, [speakDefinition, audioPriority]);
+    }, [speakDefinition, audioPriority, audioSpeed]);
 
     // Effect to trigger playback when index changes
     useEffect(() => {
@@ -121,7 +124,9 @@ export const useVocabularyPlayer = (words = [], options = {}) => {
             // Start sequence for this word
             speakWord(currentWord);
         }
-    }, [currentWordIndex, isPlaying]); // Removed currentWord from deps to avoid double triggers if object reference changes but index doesn't, though index changes should drive it.
+    // Playback intentionally advances by index. Word object refreshes must not restart audio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentWordIndex, isPlaying]);
 
     const startPlayback = (startIndex = 0) => {
         setIsPlaying(true);

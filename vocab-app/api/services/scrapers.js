@@ -4,7 +4,7 @@ import dns from 'node:dns';
 
 try {
     dns.setDefaultResultOrder('ipv4first');
-} catch (e) {
+} catch {
     // Ignore in environments where not supported
 }
 
@@ -378,7 +378,7 @@ export const scrapeGoogleTranslate = async (word) => {
                     data = await response.json();
                     break;
                 }
-            } catch (err) {
+            } catch {
                 // try next client
             }
         }

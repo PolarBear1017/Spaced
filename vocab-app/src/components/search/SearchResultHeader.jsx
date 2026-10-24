@@ -25,7 +25,6 @@ const SearchResultHeader = ({
   searchResult,
   preferredAccent,
   onAccentChange,
-  preferredSearchAudio,
   onSpeak,
   savedWordInSearch,
   saveButtonFeedback,
