@@ -81,6 +81,29 @@ const saveRequestRetention = (value) => writeString(STORAGE_KEYS.requestRetentio
 const loadFolderSortBy = () => readString(STORAGE_KEYS.folderSortBy, 'created_desc');
 const saveFolderSortBy = (value) => writeString(STORAGE_KEYS.folderSortBy, value);
 
+// Each picker remembers its own order without changing Library's preference.
+const folderPickerSortKeys = {
+  save: 'save_folder_sort_by',
+  review: 'review_folder_sort_by'
+};
+const validFolderPickerSorts = {
+  save: ['created_desc', 'recent_desc', 'name_asc'],
+  review: ['created_desc', 'recent_desc', 'name_asc', 'count_desc']
+};
+const loadFolderPickerSortBy = (picker) => {
+  try {
+    const value = readString(folderPickerSortKeys[picker], 'created_desc');
+    return validFolderPickerSorts[picker]?.includes(value) ? value : 'created_desc';
+  } catch {
+    return 'created_desc';
+  }
+};
+const saveFolderPickerSortBy = (picker, value) => {
+  if (validFolderPickerSorts[picker]?.includes(value)) {
+    writeString(folderPickerSortKeys[picker], value);
+  }
+};
+
 const loadWordSortBy = () => readString(STORAGE_KEYS.wordSortBy, 'added_desc');
 const saveWordSortBy = (value) => writeString(STORAGE_KEYS.wordSortBy, value);
 
@@ -153,6 +176,8 @@ export {
   saveRequestRetention,
   loadFolderSortBy,
   saveFolderSortBy,
+  loadFolderPickerSortBy,
+  saveFolderPickerSortBy,
   loadWordSortBy,
   saveWordSortBy,
   loadDictionaryPriority,

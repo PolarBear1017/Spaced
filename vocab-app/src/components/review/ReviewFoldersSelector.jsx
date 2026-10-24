@@ -1,3 +1,4 @@
+import { loadFolderPickerSortBy, saveFolderPickerSortBy } from '../../services/storageService';
 import { compareRecentFolders } from '../../utils/folderActivity';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Check, Folder, Search, X, ArrowUpDown } from 'lucide-react';
@@ -14,7 +15,7 @@ const ReviewFoldersSelector = ({
 }) => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('created_desc'); // Default sort
+  const [sortBy, setSortBy] = useState(() => loadFolderPickerSortBy('review'));
 
   // Filter and Sort Logic
   const processedFolders = useMemo(() => {
@@ -169,7 +170,10 @@ const ReviewFoldersSelector = ({
             <select
               className="border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white w-full sm:w-auto focus:outline-none focus:border-blue-500"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                saveFolderPickerSortBy('review', e.target.value);
+              }}
             >
               <option value="recent_desc">{t('card.sortRecent')}</option>
               <option value="created_desc">{t('review.sortLatest')}</option>

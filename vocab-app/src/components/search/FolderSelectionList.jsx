@@ -1,3 +1,4 @@
+import { loadFolderPickerSortBy, saveFolderPickerSortBy } from '../../services/storageService';
 import { compareRecentFolders } from '../../utils/folderActivity';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Circle, FileText, Info, Plus, Search, ArrowUpDown } from 'lucide-react';
@@ -19,7 +20,7 @@ const FolderSelectionList = ({
 }) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [folderSortBy, setFolderSortBy] = useState('created_desc');
+  const [folderSortBy, setFolderSortBy] = useState(() => loadFolderPickerSortBy('save'));
   const [isCreating, setIsCreating] = useState(false);
   const [createValue, setCreateValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,9 +110,8 @@ const FolderSelectionList = ({
   const sortedFolders = useMemo(() => {
     let copy = [...(folders || [])];
     if (folderSortBy === 'recent_desc') {
-      return copy.sort(compareRecentFolders);
-    }
-    if (folderSortBy === 'name_asc') {
+      copy.sort(compareRecentFolders);
+    } else if (folderSortBy === 'name_asc') {
       copy.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hant'));
     } else {
       if (copy.length > 0 && copy[0].created_at) {
@@ -349,7 +349,10 @@ const FolderSelectionList = ({
           <select
             className="border border-gray-200 rounded-xl px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             value={folderSortBy}
-            onChange={(e) => setFolderSortBy(e.target.value)}
+            onChange={(e) => {
+              setFolderSortBy(e.target.value);
+              saveFolderPickerSortBy('save', e.target.value);
+            }}
           >
             <option value="recent_desc">{t('card.sortRecent')}</option>
             <option value="created_desc">{t('card.sortLatest')}</option>

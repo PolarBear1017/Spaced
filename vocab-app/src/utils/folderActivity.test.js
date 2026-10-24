@@ -16,6 +16,21 @@ describe('recent folder activity', () => {
     expect(next.folders[0]._lastModified).toBe(10);
     expect(libraryDataReducer(state, { field: 'vocabData', value: [] }).folders).toBe(state.folders);
   });
+  it('uses cloud activity after sync instead of retaining a device timestamp', () => {
+    const next = libraryDataReducer(state, {
+      field: 'folders',
+      value: [{ id: 'a', last_activity_at: '2026-10-24T04:00:00.000Z' }]
+    });
+    expect(next.folders[0]._lastModified).toBe(0);
+    expect(next.folders[0].last_activity_at).toBe('2026-10-24T04:00:00.000Z');
+  });
+  it('keeps cloud ordering authoritative when a device clock is ahead', () => {
+    const folders = [
+      { id: 'server-newer', last_activity_at: '2026-10-24T04:00:01.000Z' },
+      { id: 'client-ahead', last_activity_at: '2026-10-24T04:00:00.000Z', _lastModified: Date.parse('2030-01-01') }
+    ];
+    expect(folders.sort(compareRecentFolders).map(folder => folder.id)).toEqual(['server-newer', 'client-ahead']);
+  });
   it('tracks edits and creation', () => {
     const next = libraryDataReducer(state, { field: 'folders', value: prev => [...prev.map(f => f.id === 'a' ? { ...f, name: 'Renamed' } : f), { id: 'new' }], modifiedAt: 100 });
     expect(next.folders.map(f => f._lastModified)).toEqual([100, 20, 0, 100]);
@@ -34,7 +49,7 @@ describe('recent folder activity', () => {
     expect(synced.folders.slice(0, 2).sort(compareRecentFolders).map(f => f.id)).toEqual(['b', 'a']);
   });
   it('sorts by modification with creation fallback and tolerates invalid dates', () => {
-    const folders = [{ id: 'old', created_at: '2025-01-01' }, { id: 'invalid', updated_at: 'invalid' }, { id: 'edited', _lastModified: Date.parse('2026-10-01'), created_at: '2024-01-01' }];
-    expect(folders.sort(compareRecentFolders).map(f => f.id)).toEqual(['edited', 'old', 'invalid']);
+    const folders = [{ id: 'old', created_at: '2025-01-01' }, { id: 'invalid', updated_at: 'invalid' }, { id: 'cloud', last_activity_at: '2026-10-20' }, { id: 'edited', _lastModified: Date.parse('2026-10-21'), created_at: '2024-01-01' }];
+    expect(folders.sort(compareRecentFolders).map(f => f.id)).toEqual(['edited', 'cloud', 'old', 'invalid']);
   });
 });

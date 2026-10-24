@@ -9,7 +9,7 @@ const signInAnonymously = () => supabase.auth.signInAnonymously();
 const signInWithGoogle = () => supabase.auth.signInWithOAuth({
   provider: 'google',
   options: {
-    redirectTo: window.location.origin
+    redirectTo: `${window.location.origin}/`
   }
 });
 

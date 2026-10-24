@@ -9,6 +9,7 @@ import {
 import { mapLibraryRowToWord } from '../domain/mappers/libraryMapper';
 import { entryToWord } from '../utils/mapper';
 import i18n from '../i18n/config';
+import { supabase } from '../supabase';
 
 const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, lastMutationTimeRef }) => {
   const userId = session?.user?.id || null;
@@ -108,6 +109,32 @@ const useSync = ({ session, setFolders, setVocabData, vocabData, syncLockRef, la
       setLoadState({ userId: null, loaded: true, error: false });
     }
   }, [loadData, session?.user?.id]);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+
+    const channel = supabase
+      .channel(`folder-activity:${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'folders',
+        filter: `user_id=eq.${userId}`
+      }, ({ new: remoteFolder }) => {
+        const normalizedId = remoteFolder?.id?.toString();
+        if (!normalizedId) return;
+        setFolders(previous => previous.map(folder => (
+          folder.id?.toString() === normalizedId
+            ? { ...folder, ...remoteFolder, id: normalizedId }
+            : folder
+        )));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [setFolders, userId]);
 
   useEffect(() => {
     const handleFocusOrVisible = () => {

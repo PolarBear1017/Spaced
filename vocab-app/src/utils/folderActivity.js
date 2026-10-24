@@ -4,9 +4,15 @@ const timestamp = value => {
   return Number.isFinite(time) ? time : 0;
 };
 
-export const folderActivityTime = folder => Math.max(
-  timestamp(folder._lastModified), timestamp(folder.updated_at), timestamp(folder.created_at)
-);
+export const folderActivityTime = folder => {
+  const cloudActivity = timestamp(folder.last_activity_at);
+  if (cloudActivity > 0) return cloudActivity;
+  return Math.max(
+    timestamp(folder._lastModified),
+    timestamp(folder.updated_at),
+    timestamp(folder.created_at)
+  );
+};
 
 export const compareRecentFolders = (a, b) => folderActivityTime(b) - folderActivityTime(a)
   || (a.name || '').localeCompare(b.name || '', 'zh-Hant')
@@ -19,8 +25,12 @@ export const libraryDataReducer = (state, { field, value, modifiedAt }) => {
     const previous = new Map(state.folders.map(folder => [folder.id, folder]));
     return { ...state, folders: next.map(folder => {
       const old = previous.get(folder.id);
+      const hasCloudActivity = timestamp(folder.last_activity_at) > 0;
       return { ...folder, _lastModified: modifiedAt && old !== folder
-        ? modifiedAt : Math.max(timestamp(folder._lastModified), timestamp(old?._lastModified)) };
+        ? modifiedAt
+        : hasCloudActivity
+          ? 0
+          : Math.max(timestamp(folder._lastModified), timestamp(old?._lastModified)) };
     }) };
   }
   if (!modifiedAt) return { ...state, vocabData: next };

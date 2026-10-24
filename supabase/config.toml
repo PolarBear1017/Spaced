@@ -1,5 +1,15 @@
 project_id = "English-Vocabulary-Web-App"
 
+[auth]
+site_url = "https://spaced-vocabulary.vercel.app"
+additional_redirect_urls = [
+  "https://vocab-app-beta-blush.vercel.app/",
+  "http://localhost:3000",
+  "https://spaced-vocabulary.vercel.app/**",
+  "http://localhost:5173/**",
+  "https://*-polar-bears-projects-5eff6df3.vercel.app/**",
+]
+
 [functions.ai-dictionary]
 # The handler verifies session JWTs with Supabase Auth before cache or AI access.
 # Avoid the legacy gateway JWT check so modern signing keys work too.
