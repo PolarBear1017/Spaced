@@ -76,7 +76,11 @@ export const recoveryProgress = (progress, now = new Date()) => {
 // Share the same folder/star scope between the setup counts and the actual queue.
 export const filterReviewWords = (words, { folderIds = ['all'], allFolderIds = [], onlyStarred = false } = {}) => {
   const allSelected = folderIds.includes('all') || (allFolderIds.length > 0 && allFolderIds.every(id => folderIds.includes(id)));
-  return words.filter(word => (!onlyStarred || word.isStarred) && (allSelected || word.folderIds?.some(id => folderIds.includes(id))));
+  return words.filter(word => {
+    const definitions = word.selectedDefinitions ?? word.selected_definitions;
+    if (Array.isArray(definitions) && definitions.length === 0) return false;
+    return (!onlyStarred || word.isStarred) && (allSelected || word.folderIds?.some(id => folderIds.includes(id)));
+  });
 };
 
 // A daily summary quiz recaps what was actually completed today, regardless

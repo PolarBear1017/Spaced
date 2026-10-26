@@ -24,6 +24,14 @@ const getEntryKey = (item) => {
   return def + '|||' + trans;
 };
 
+const isDefinitionSavedMatch = (left, right) => {
+  const text = (item, field) => (typeof item === 'string'
+    ? (field === 'definition' ? item : '') : item[field] || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const definition = text(right, 'definition');
+  return definition ? text(left, 'definition') === definition
+    : Boolean(text(right, 'translation')) && text(left, 'translation') === text(right, 'translation');
+};
+
 const SearchResultCard = ({
   searchResult,
   normalizedEntries,
@@ -62,6 +70,7 @@ const SearchResultCard = ({
   const [selectedEntryIndices, setSelectedEntryIndices] = useState(null);
   const [draftFolderIds, setDraftFolderIds] = useState(null);
   const [isConfirmingFolders, setIsConfirmingFolders] = useState(false);
+  const [isSavingDefinition, setIsSavingDefinition] = useState(false);
   const [showDefaultTip, setShowDefaultTip] = useState(false);
   const [isSwitchingSource, setIsSwitchingSource] = useState(false);
   const [customDefinitions, setCustomDefinitions] = useState([]);
@@ -103,7 +112,7 @@ const SearchResultCard = ({
       };
     }
     const raw = savedWordInSearch.selectedDefinitions || savedWordInSearch.selected_definitions;
-    const list = Array.isArray(raw) && raw.length > 0 ? raw : normalizeEntries(savedWordInSearch);
+    const list = Array.isArray(raw) ? raw : normalizeEntries(savedWordInSearch);
 
     const defSet = new Set();
     const defOnly = new Set();
@@ -248,9 +257,9 @@ const SearchResultCard = ({
   const hasDefinitionChanges = useMemo(() => {
     if (!savedWordInSearch) return false;
     const currentDefs = selectedEntries.map(getEntryKey).filter(k => k !== '|||');
-    const originalDefsRaw = (Array.isArray(savedWordInSearch.selectedDefinitions) && savedWordInSearch.selectedDefinitions.length > 0)
+    const originalDefsRaw = Array.isArray(savedWordInSearch.selectedDefinitions)
       ? savedWordInSearch.selectedDefinitions
-      : ((Array.isArray(savedWordInSearch.selected_definitions) && savedWordInSearch.selected_definitions.length > 0)
+      : (Array.isArray(savedWordInSearch.selected_definitions)
         ? savedWordInSearch.selected_definitions
         : normalizeEntries(savedWordInSearch));
     const originalDefs = originalDefsRaw.map(getEntryKey).filter(k => k !== '|||');
@@ -284,6 +293,41 @@ const SearchResultCard = ({
       return next.size === total ? null : next;
     });
   }, [orderedEntries.length]);
+
+  const handleToggleSavedDefinition = async (entry) => {
+    if (isProcessingRef.current) return;
+    if (!isDataLoaded) {
+      toast.error(t('card.dataLoadingToast'));
+      return;
+    }
+    isProcessingRef.current = true;
+    setIsSavingDefinition(true);
+    const raw = savedWordInSearch?.selectedDefinitions ?? savedWordInSearch?.selected_definitions;
+    const saved = savedWordInSearch
+      ? (Array.isArray(raw) ? raw : normalizeEntries(savedWordInSearch))
+      : [];
+    const removing = isDefinitionSaved(entry);
+    const next = removing
+      ? saved.filter(item => !isDefinitionSavedMatch(item, entry))
+      : [...saved, entry];
+    try {
+      const definitions = next.map(item => {
+        if (typeof item === 'string') return { definition: item, examples: [] };
+        const clean = { ...item };
+        delete clean.isSaved;
+        delete clean.isCustom;
+        return clean;
+      });
+      const result = await onSaveWord(savedWordInSearch?.folderIds || [], definitions,
+        { showToast: false }, savedWordInSearch || searchResult);
+      if (result) toast.success(t(removing ? 'card.definitionRemovedToast' : 'card.definitionSavedToast'));
+    } catch {
+      toast.error(t('card.saveFailedToast'));
+    } finally {
+      isProcessingRef.current = false;
+      setIsSavingDefinition(false);
+    }
+  };
 
   const handleToggleAll = useCallback(() => {
     setSelectedEntryIndices((prev) => {
@@ -455,6 +499,10 @@ const SearchResultCard = ({
       if (entry.isSaved) indices.push(index);
     });
     if (indices.length === 0) {
+      if (savedWordInSearch) {
+        setSelectedEntryIndices(new Set());
+        return;
+      }
       // Default to saving only the first definition for new words.
       setSelectedEntryIndices(new Set([0]));
       return;
@@ -464,7 +512,7 @@ const SearchResultCard = ({
       return;
     }
     setSelectedEntryIndices(new Set(indices));
-  }, [orderedEntries]);
+  }, [orderedEntries, savedWordInSearch]);
 
   const handleStartSave = useCallback(() => {
     if (saveStep !== 'idle') return;
@@ -478,6 +526,7 @@ const SearchResultCard = ({
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      if (event.defaultPrevented || event.target?.closest?.('[role="menu"], [aria-haspopup="menu"]')) return;
       if (event.key.toLowerCase() === playAudioShortcut.toLowerCase()) {
         if (searchResult?.word && onSpeak) {
           event.preventDefault();
@@ -601,6 +650,7 @@ const SearchResultCard = ({
       <div className={`p-6 space-y-6${isSelectingView ? ' max-h-[70vh] overflow-y-auto' : ''}`}>
         <div id="search-section-definitions">
           <SearchResultEntries
+            key={searchResult.word}
             normalizedEntries={orderedEntries}
             searchWord={searchResult.word}
             selectedEntryIndices={selectedEntryIndices}
@@ -608,6 +658,8 @@ const SearchResultCard = ({
             onToggleAll={handleToggleAll}
             allSelected={selectedEntryIndices === null}
             readOnly={!isSelectingView}
+            onToggleSavedDefinition={saveStep === 'idle' ? handleToggleSavedDefinition : undefined}
+            isSavingDefinition={isSavingDefinition || !isDataLoaded}
             onDeleteEntry={(entry) => {
               setCustomDefinitions(prev => prev.filter(d => 
                 getEntryKey(d) !== getEntryKey(entry)

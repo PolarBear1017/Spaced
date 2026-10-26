@@ -5,6 +5,7 @@ import { parseExampleItem } from '../../utils/data';
 import { highlightWord, highlightWithCollocation } from '../../utils/text.jsx';
 import { speak } from '../../services/speechService';
 import { useSettingsContext } from '../../contexts/SettingsContext';
+import DefinitionActions from './DefinitionActions';
 
 const SearchResultEntries = ({
   normalizedEntries,
@@ -15,7 +16,9 @@ const SearchResultEntries = ({
   allSelected,
   readOnly = false,
   onDeleteEntry,
-  onSearchCollocation
+  onSearchCollocation,
+  onToggleSavedDefinition,
+  isSavingDefinition = false
 }) => {
   const { t } = useTranslation();
   const { state: { audioSpeed } } = useSettingsContext();
@@ -51,7 +54,7 @@ const SearchResultEntries = ({
               ? 'border-2 border-blue-500 bg-blue-50/50 cursor-pointer'
               : 'border border-gray-200 bg-white opacity-60 cursor-pointer');
 
-          return (
+          const content = (
             <div
               key={`${entry.definition}-${index}`}
               role={readOnly ? undefined : 'button'}
@@ -63,7 +66,7 @@ const SearchResultEntries = ({
                   onToggleEntry?.(index);
                 }
               }}
-              className={`relative ${baseClassName} ${interactiveClassName}`}
+              className={`relative ${baseClassName} ${interactiveClassName} ${onToggleSavedDefinition ? 'pb-10' : ''}`}
             >
               {!readOnly && (
                 <div className="absolute top-3 right-3 flex items-center gap-2">
@@ -162,6 +165,12 @@ const SearchResultEntries = ({
               )}
             </div>
           );
+          return onToggleSavedDefinition ? (
+            <DefinitionActions key={`${entry.definition}-${index}`} isSaved={isSaved}
+              disabled={isSavingDefinition} onToggle={() => onToggleSavedDefinition(entry)}>
+              {content}
+            </DefinitionActions>
+          ) : content;
         })}
         {normalizedEntries.length === 0 && (
           <p className="text-gray-500">{t('card.noDefinitions')}</p>

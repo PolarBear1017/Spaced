@@ -6,6 +6,7 @@ import WordUsefulness from '../common/WordUsefulness';
 import SearchResultEntries from '../search/SearchResultEntries';
 import { normalizeEntries } from '../../utils/data';
 import { useSettingsContext } from '../../contexts/SettingsContext';
+import { toast } from 'react-hot-toast';
 
 const LibraryWordDetail = ({
   entry,
@@ -19,19 +20,22 @@ const LibraryWordDetail = ({
   onDeleteWord,
   isPlaying = false,
   onClose,
-  onToggleStar
+  onToggleStar,
+  onSaveDefinitions
 }) => {
   const { t } = useTranslation();
   const [preferredAccent, setPreferredAccent] = useState('us');
   const [tipOpen, setTipOpen] = useState(false);
+  const [isSavingDefinition, setIsSavingDefinition] = useState(false);
+  const savingRef = useRef(false);
   const tipRef = useRef(null);
   const entries = useMemo(() => {
     const selectedDefs = Array.isArray(entry?.selectedDefinitions)
       ? entry.selectedDefinitions
       : (Array.isArray(entry?.selected_definitions)
         ? entry.selected_definitions
-        : []);
-    if (selectedDefs.length > 0) {
+        : null);
+    if (selectedDefs) {
       return normalizeEntries({ entries: selectedDefs });
     }
     return normalizeEntries(entry || {});
@@ -56,6 +60,7 @@ const LibraryWordDetail = ({
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      if (event.defaultPrevented || event.target?.closest?.('[role="menu"], [aria-haspopup="menu"]')) return;
       if (event.key.toLowerCase() === playAudioShortcut.toLowerCase()) {
         event.preventDefault();
         onSpeak?.(entry.word, preferredAudio);
@@ -269,7 +274,24 @@ const LibraryWordDetail = ({
       </div>
 
       <div className="p-6 space-y-6">
-        <SearchResultEntries normalizedEntries={entries} searchWord={entry.word} readOnly />
+        <SearchResultEntries key={entry.id} normalizedEntries={entries.map(item => ({ ...item, isSaved: true }))} searchWord={entry.word} readOnly
+          isSavingDefinition={isSavingDefinition}
+          onToggleSavedDefinition={onSaveDefinitions ? async (definition) => {
+            if (savingRef.current) return;
+            savingRef.current = true;
+            setIsSavingDefinition(true);
+            try {
+              const targetIndex = entries.findIndex(item => item.definition === definition.definition && item.translation === definition.translation);
+              const remaining = entries.filter((_, index) => index !== targetIndex);
+              const result = await onSaveDefinitions(entry, remaining);
+              if (result) toast.success(t('card.definitionRemovedToast'));
+            } catch {
+              toast.error(t('card.saveFailedToast'));
+            } finally {
+              savingRef.current = false;
+              setIsSavingDefinition(false);
+            }
+          } : undefined} />
 
         {(entry.mnemonics || entry.notes) && (
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-gray-700 space-y-2">

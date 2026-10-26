@@ -204,5 +204,6 @@ const isWordMatch = (word, query) => {
   }
 
   // Otherwise, fallback to the default translation
+  if (Array.isArray(word.selectedDefinitions)) return false;
   return (word.translation || '').toLowerCase().includes(normalizedQuery);
 };

@@ -77,8 +77,7 @@ const WordRow = ({
         : null;
     const previewText = selectedPreview?.translation
         || selectedPreview?.definition
-        || word.translation
-        || word.definition;
+        || (Array.isArray(word.selectedDefinitions) ? '' : (word.translation || word.definition));
 
     return (
         <div

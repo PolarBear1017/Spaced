@@ -7,6 +7,11 @@ const fresh = id => ({ id, proficiencyScore: 0 });
 const completedDay = { words: ['1', '2', '3', '4', '5'], checkedIn: true };
 
 describe('daily review planner', () => {
+  it('excludes words whose last saved meaning was removed, while retaining legacy words', () => {
+    const words = [old('empty', undefined, { selectedDefinitions: [] }), old('legacy'),
+      old('saved', undefined, { selectedDefinitions: [{ definition: 'kept' }] })];
+    expect(filterReviewWords(words).map(word => word.id)).toEqual(['legacy', 'saved']);
+  });
   it('builds a shuffled summary quiz from all unique words completed today', () => {
     const words = [old('1'), old('2'), old('3'), { ...old('duplicate'), libraryId: '2' }].map(word => ({ ...word, word: `word${word.id}` }));
     const quiz = buildDailySummaryQuiz(words, ['1', '2'], { random: () => 0.99 });

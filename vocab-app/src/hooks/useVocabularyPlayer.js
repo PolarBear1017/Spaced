@@ -67,6 +67,10 @@ export const useVocabularyPlayer = (words = [], options = {}) => {
             : null;
 
         const isEnDef = definitionLanguage === 'en';
+        if (Array.isArray(word.selectedDefinitions) && word.selectedDefinitions.length === 0) {
+            timeoutRef.current = setTimeout(playNext, 1000);
+            return;
+        }
         let textToSpeak = "";
 
         if (isEnDef) {

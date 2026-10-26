@@ -144,10 +144,10 @@ const useReview = ({
       ? currentReviewWord.selectedDefinitions
       : (Array.isArray(currentReviewWord.selected_definitions)
         ? currentReviewWord.selected_definitions
-        : []);
-    if (selectedDefs.length === 0) return normalizeEntries(currentReviewWord);
+        : null);
+    if (!selectedDefs) return normalizeEntries(currentReviewWord);
     const normalizedSelected = normalizeEntries({ entries: selectedDefs });
-    if (normalizedSelected.length === 0) return normalizeEntries(currentReviewWord);
+    if (normalizedSelected.length === 0) return [];
     return [normalizedSelected[currentReviewWord.reviewEntryIndex || 0] || normalizedSelected[0]];
   }, [currentReviewWord, reviewQueue.length]);
   const primaryReviewEntry = currentReviewEntries[0] || {};

@@ -42,6 +42,7 @@ const FolderDetail = ({
   dragHandleProps,
   onRemoveWordFromFolder,
   onToggleStar,
+  onSaveDefinitions,
   onGoSearch,
   onSearchWord
 }) => {
@@ -216,6 +217,11 @@ const FolderDetail = ({
             }
           }}
           onToggleStar={onToggleStar}
+          onSaveDefinitions={async (word, definitions) => {
+            const saved = await onSaveDefinitions?.(word, definitions);
+            if (saved) setViewingWord(current => current?.id === word.id ? saved : current);
+            return saved;
+          }}
         />
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

@@ -30,6 +30,7 @@ const LibraryOverview = ({
   statsByFolderId,
   onRemoveWordFromFolder,
   onToggleStar,
+  onSaveDefinitions,
   onSearchWord
 }) => {
   const { t } = useTranslation();
@@ -183,6 +184,11 @@ const LibraryOverview = ({
                   }
                 }}
                 onToggleStar={onToggleStar}
+                onSaveDefinitions={async (word, definitions) => {
+                  const saved = await onSaveDefinitions?.(word, definitions);
+                  if (saved) setViewingWord(current => current?.id === word.id ? saved : current);
+                  return saved;
+                }}
               />
             </div>
           </div>
