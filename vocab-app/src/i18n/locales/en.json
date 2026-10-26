@@ -423,6 +423,7 @@
       "reviewAgain": "Take another look at: {{words}}",
       "practiceMistakes": "Practice missed words",
       "answerReminder": "Another chance to remember: the correct spelling is {{word}}.",
+      "correctionInstruction": "Type the correct spelling once more to continue. This question keeps your first-attempt result.",
       "retry": "Draw {{count}} more questions",
       "done": "Done",
       "unavailable": "Complete today’s review goal before starting the summary quiz."

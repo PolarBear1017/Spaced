@@ -23,6 +23,7 @@ const ReviewSession = ({
   lastResult,
   isAwaitingNext,
   answerHint,
+  hasMistake,
   currentReviewWord,
   currentReviewEntries,
   primaryReviewEntry,
@@ -68,6 +69,7 @@ const ReviewSession = ({
             giveHint={giveHint}
             feedback={feedback}
             isSummaryQuiz={sessionKind === 'summaryQuiz'}
+            hasMistake={hasMistake}
           />
         );
       case 'cloze':

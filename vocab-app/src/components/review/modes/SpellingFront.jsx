@@ -11,6 +11,7 @@ const SpellingFront = ({
     checkAnswer,
     giveHint,
     feedback,
+    hasMistake = false,
     isSummaryQuiz = false
 }) => {
     const { t } = useTranslation();
@@ -42,16 +43,21 @@ const SpellingFront = ({
                     spellCheck={false}
                     autoFocus
                 />
-                {!isSummaryQuiz && (
-                    <button
-                        onClick={giveHint}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors p-2"
-                        title={t('review.showHint')}
-                    >
-                        <Lightbulb className="w-5 h-5" />
-                    </button>
-                )}
+                <button
+                    onClick={giveHint}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors p-2"
+                    title={t('review.showHint')}
+                    aria-label={t('review.showHint')}
+                >
+                    <Lightbulb className="w-5 h-5" />
+                </button>
             </div>
+            {isSummaryQuiz && hasMistake && (
+                <div role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 space-y-1">
+                    <p>{t('review.summaryQuiz.answerReminder', { word: currentReviewWord.word })}</p>
+                    <p>{t('review.summaryQuiz.correctionInstruction')}</p>
+                </div>
+            )}
             {!isSummaryQuiz && feedback === 'incorrect' && (
                 <p className="text-sm text-red-500">{t('review.spellingRetryHint')}</p>
             )}

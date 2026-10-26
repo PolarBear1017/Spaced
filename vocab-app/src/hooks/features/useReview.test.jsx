@@ -22,6 +22,12 @@ const submit = answer => {
   run(() => review.actions.handleAnswerChange(answer));
   run(() => review.actions.checkAnswer());
 };
+const answerQuestion = answer => {
+  submit(answer);
+  if (review.state.hasMistake && !review.state.isAwaitingNext) {
+    submit(review.derived.currentReviewWord.word);
+  }
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -88,7 +94,7 @@ describe('daily spelling summary quiz', () => {
     for (let index = 0; index < 5; index += 1) {
       const word = review.derived.currentReviewWord.word;
       if (index < 2) incorrectWords.push(word);
-      submit(index === 0 ? 'wrong' : index === 1 ? `${word}x` : ` ${word.toUpperCase()} `);
+      answerQuestion(index === 0 ? 'wrong' : index === 1 ? `${word}x` : ` ${word.toUpperCase()} `);
       expect(review.state.isFlipped).toBe(true);
       expect(review.state.isAwaitingNext).toBe(true);
       // Repeated submissions cannot replace the first result or add another score.
@@ -113,7 +119,7 @@ describe('daily spelling summary quiz', () => {
     const firstIds = review.state.reviewQueue.map(word => word.id);
     const missedIds = firstIds.slice(0, 2);
     for (let index = 0; index < 5; index += 1) {
-      submit(index < 2 ? 'wrong' : review.derived.currentReviewWord.word);
+      answerQuestion(index < 2 ? 'wrong' : review.derived.currentReviewWord.word);
       run(() => review.actions.advanceToNextCard());
     }
     expect(review.state.sessionSummary.incorrectIds).toEqual(missedIds);
@@ -136,7 +142,7 @@ describe('daily spelling summary quiz', () => {
     expect(review.state.summaryQuizCount).toBe(2);
     run(() => review.actions.startDailySummaryQuiz());
     for (let index = 0; index < 2; index += 1) {
-      submit('wrong');
+      answerQuestion('wrong');
       run(() => review.actions.advanceToNextCard());
     }
     vi.setSystemTime(new Date('2026-10-27T04:00:00Z'));
@@ -153,7 +159,7 @@ describe('daily spelling summary quiz', () => {
     daily.progress.days[day].words = ['0'];
     render();
     run(() => review.actions.startDailySummaryQuiz());
-    submit('wrong');
+    answerQuestion('wrong');
     run(() => review.actions.advanceToNextCard());
     expect(review.state.sessionSummary.correctCount).toBe(0);
 
@@ -163,6 +169,41 @@ describe('daily spelling summary quiz', () => {
     submit(review.derived.currentReviewWord.word);
     run(() => review.actions.advanceToNextCard());
     expect(review.state.sessionSummary).toMatchObject({ count: 1, correctCount: 1, incorrectWords: [] });
+  });
+
+  it.each(['wrong', 'typo'])('requires exact correction after a %s answer and preserves the first result', kind => {
+    daily.progress.days[day].words = ['0'];
+    render();
+    run(() => review.actions.startDailySummaryQuiz());
+    const word = review.derived.currentReviewWord.word;
+    run(() => review.actions.giveHint());
+    expect(review.state.answerHint).toBe(`${word[0]}...`);
+    submit(kind === 'typo' ? `${word}x` : 'wrong');
+    expect(review.state.answerHint).toBe(word);
+    expect(review.state.hasMistake).toBe(true);
+    expect(review.state.isFlipped).toBe(false);
+    expect(review.state.isAwaitingNext).toBe(false);
+    run(() => review.actions.advanceToNextCard());
+    expect(review.state.sessionSummary).toBeNull();
+    submit(`${word}x`);
+    expect(review.state.isAwaitingNext).toBe(false);
+    submit(word);
+    expect(review.state.isAwaitingNext).toBe(true);
+    run(() => review.actions.advanceToNextCard());
+    expect(review.state.sessionSummary).toMatchObject({ count: 1, correctCount: 0, incorrectWords: [word] });
+    expect(daily.controller.update).not.toHaveBeenCalled();
+    expect(props.updateWord).not.toHaveBeenCalled();
+  });
+
+  it('allows a correct first answer after a letter hint without requiring correction', () => {
+    run(() => review.actions.startDailySummaryQuiz());
+    run(() => review.actions.giveHint());
+    submit(review.derived.currentReviewWord.word);
+    expect(review.state.hasMistake).toBe(false);
+    expect(review.state.isAwaitingNext).toBe(true);
+    run(() => review.actions.advanceToNextCard());
+    expect(review.state.hasMistake).toBe(false);
+    expect(review.state.answerHint).toBe('');
   });
 
   it('requires check-in and available reviewed words before starting', () => {

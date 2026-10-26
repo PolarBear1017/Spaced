@@ -474,7 +474,8 @@ const useReview = ({
       }
     }
 
-    if (sessionKind !== 'summaryQuiz' && reviewMode !== 'flashcard' && result.allowRetry) {
+    const needsQuizCorrection = sessionKind === 'summaryQuiz' && result.grade < 3;
+    if (needsQuizCorrection || (reviewMode !== 'flashcard' && result.allowRetry)) {
       setFeedback('incorrect');
       setLastResult(result);
       setIsFlipped(false);

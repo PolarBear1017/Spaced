@@ -413,6 +413,7 @@
       "reviewAgain": "這幾個字再看一次：{{words}}",
       "practiceMistakes": "再練錯字",
       "answerReminder": "再記一次，正確拼法是 {{word}}。",
+      "correctionInstruction": "請自己再輸入一次正確拼法，再繼續下一題。這題仍保留第一次作答的結果。",
       "retry": "再抽 {{count}} 題",
       "done": "完成",
       "unavailable": "完成今日複習目標後，才能進行今日總結測驗。"
