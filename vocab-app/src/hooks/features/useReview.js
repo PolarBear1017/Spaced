@@ -271,7 +271,7 @@ const useReview = ({
     setAnswerHint('');
     setHasMistake(false);
     setActiveTab('review_session');
-  }, [cloudReady, controller, progressKey, setActiveTab, vocabData, sessionSummary]);
+  }, [cloudReady, controller, progressKey, setActiveTab, vocabData, sessionSummary, setReviewMode, setIsFlipped, setAnswerHint]);
 
   const advanceToNextCard = useCallback(() => {
     // Every quiz question needs one submitted answer before it can be advanced.

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import React, { act } from 'react';
+import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import useReview from './useReview';
@@ -15,7 +15,11 @@ vi.mock('../../services/speechService', () => ({ speak: vi.fn(), getAudioUrl: ()
 vi.mock('../../i18n/config', () => ({ default: { t: key => key } }));
 
 let root, container, review, props, day;
-const Probe = () => { review = useReview(props); return null; };
+const Probe = () => {
+  const value = useReview(props);
+  useEffect(() => { review = value; });
+  return null;
+};
 const run = action => act(action);
 const render = () => run(() => root.render(<Probe />));
 const submit = answer => {
