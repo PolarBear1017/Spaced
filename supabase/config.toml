@@ -14,3 +14,7 @@ additional_redirect_urls = [
 # The handler verifies session JWTs with Supabase Auth before cache or AI access.
 # Avoid the legacy gateway JWT check so modern signing keys work too.
 verify_jwt = false
+
+[functions.review-reminders]
+# Handler validates user JWTs or the private Vault scheduler credential.
+verify_jwt = false

@@ -1,4 +1,27 @@
 {
+  "reminders": {
+    "settingsSummary": "Review difficulty and daily reminders",
+    "title": "Daily review reminders",
+    "description": "Get a daily reminder at your chosen time, even after closing the website. Reminders are skipped after you check in for the day.",
+    "enable": "Enable reminders on this device",
+    "time": "Daily reminder time",
+    "timezone": "Reminder time zone",
+    "save": "Save reminder settings",
+    "test": "Send test notification",
+    "loading": "Loading notification settings…",
+    "saved": "Reminder settings saved.",
+    "testSent": "Test notification sent. Check your device notifications.",
+    "unsupported": "Background notifications are unavailable in this browser. Use a browser that supports push notifications and open the site over HTTPS.",
+    "denied": "Notifications are blocked. Allow notifications in your browser or device website settings, then return here.",
+    "permissionNeeded": "Allow notifications to enable daily reminders.",
+    "notConfigured": "The notification service is not set up yet. Please try again later.",
+    "unavailable": "Unable to load notification settings. Check your connection and try again.",
+    "saveFailed": "Settings could not be saved. Check your connection and try again.",
+    "testFailed": "Test notification failed. Save your settings and wait one minute before trying again. If the subscription expired, turn reminders off and on again.",
+    "retry": "Reload settings",
+    "deviceNote": "Settings apply to this browser and account. Enable reminders separately on other devices. Network, battery saver or Do Not Disturb settings may delay delivery. At most one daily reminder is sent. Save after changing the time or time zone.",
+    "iosNote": "iPhone / iPad: Requires iOS / iPadOS 16.4 or later. Add the site to your Home Screen, open it from there, then allow notifications."
+  },
   "usefulness": {
     "settingsTitle": "Word Usefulness",
     "showIndicators": "Show word ratings",

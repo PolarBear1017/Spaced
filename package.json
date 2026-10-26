@@ -19,6 +19,9 @@
     "db:new": "supabase migration new",
     "db:plan": "node scripts/supabase-db.mjs plan",
     "db:push": "node scripts/supabase-db.mjs push",
+    "reminders:keys": "node scripts/setup-review-push.mjs",
+    "reminders:secrets": "supabase secrets set --env-file .env.review-push.local --project-ref qucyaothykoxwluaezwh",
+    "functions:deploy:reminders": "supabase functions deploy review-reminders --project-ref qucyaothykoxwluaezwh --use-api",
     "functions:deploy": "supabase functions deploy ai-dictionary --project-ref qucyaothykoxwluaezwh --use-api"
   },
   "devDependencies": {

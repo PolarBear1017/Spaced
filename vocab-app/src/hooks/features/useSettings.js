@@ -23,6 +23,7 @@ import {
   savePlayAudioShortcut
 } from '../../services/storageService';
 import i18n from '../../i18n/config';
+import { detachBrowserSubscription } from '../../services/reminderService';
 import {
   getSession,
   onAuthStateChange,
@@ -121,6 +122,7 @@ const useSettings = () => {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    await detachBrowserSubscription();
     const { error } = await signOut();
     if (error) alert(`${i18n.t('settings.logoutFailed', '登出失敗')}: ${error.message}`);
   }, []);

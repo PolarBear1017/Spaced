@@ -124,7 +124,7 @@ const SettingsMain = ({
             </div>
             <div className="text-left">
               <div className="font-bold text-gray-800">{t('settings.review')}</div>
-              <div className="text-sm text-gray-500">{t('settings.reviewDesc')}</div>
+              <div className="text-sm text-gray-500">{t('reminders.settingsSummary')}</div>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-gray-300" />

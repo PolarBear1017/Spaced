@@ -6,12 +6,14 @@ import useLibrary from './features/useLibrary';
 import useSearch from './features/useSearch';
 import useReview from './features/useReview';
 import useAudioPreferences from './useAudioPreferences';
+import useReviewReminders from './features/useReviewReminders';
 import { toSearchResultFromLibrary } from '../domain/mappers/searchResultMapper';
 
 const useVocabularyApp = () => {
   const toast = useToast();
   const navigation = useNavigation();
   const settings = useSettings();
+  const reminders = useReviewReminders(settings.state.session, settings.state.sessionReady, settings.state.uiLanguage);
   const preferences = useAudioPreferences();
 
   const apiKeys = useMemo(() => ({
@@ -78,7 +80,7 @@ const useVocabularyApp = () => {
 
   return {
     navigation,
-    settings,
+    settings: { ...settings, reminders },
     preferences,
     library: {
       ...library,

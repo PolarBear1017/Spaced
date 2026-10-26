@@ -1,6 +1,7 @@
 import React from 'react';
 import { Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import SettingsReminders from './SettingsReminders';
 
 const SettingsReview = ({ requestRetention, setRequestRetention }) => {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ const SettingsReview = ({ requestRetention, setRequestRetention }) => {
           </select>
         </div>
       </div>
+      <SettingsReminders />
     </>
   );
 };

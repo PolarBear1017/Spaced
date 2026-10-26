@@ -108,6 +108,85 @@ RLS and rejection of unauthenticated RPC calls. Do not run it against real users
 
 The database migration and frontend deployment remain separate steps.
 
+## Background daily review reminders
+
+The frontend setting lives under Settings → Review. Each browser/account gets its
+own opt-in subscription, daily time, IANA timezone, and notification language.
+Anonymous Auth sessions work too. Signing out unsubscribes the browser; switching
+accounts detaches the previous account's subscription. Other devices opt in separately.
+
+`20261024100000_review_reminders.sql` stores subscriptions behind owner-read RLS;
+only the server can write credentials or delivery state. The service-only claim
+RPC skips completed check-ins using the account's review timezone, claims up to
+50 due devices with row locks and five-minute leases, and suppresses same-day
+duplicates. It catches up for up to 60 minutes on the same local day and retries
+transient failures up to three times. A delivery timeout can be ambiguous; browser
+notification tags collapse replacements, but absolute exactly-once delivery is
+not guaranteed. HTTP 404/410 removes expired subscriptions.
+
+`20261024100100_schedule_review_reminders.sql` installs a minutely pg_cron/pg_net
+job. Its credential is generated directly in Vault. The Edge Function validates
+this credential through a service-only RPC, or validates a user's JWT through
+Supabase Auth before settings/test actions. It never accepts a user JWT for a
+dispatch action. Push destinations are restricted to browser push services, and
+redirects are rejected. Test pushes have a per-subscription one-minute cooldown.
+
+Deployment is separate from implementation. After verifying CLI login/link/history
+and testing the migrations, deploy all three parts to make reminders available:
+
+```powershell
+npm run reminders:keys
+npm run reminders:secrets
+npm run functions:deploy:reminders
+npm run db:plan
+npm run db:push
+# Deploy the frontend using the project's normal Vercel workflow.
+```
+
+The setup script creates `.env.review-push.local` (ignored) without printing the
+private key, and preserves it on reruns. Keep a private backup; rotating VAPID keys
+invalidates existing subscriptions. The contact URL can be changed in that ignored
+file if the deployment's public support URL changes. No push secret belongs in a
+VITE environment variable. The scheduler targets project `qucyaothykoxwluaezwh`.
+
+Production rollout completed on 2026-10-24: both reminder migrations and the
+`review-reminders` function are deployed, VAPID secrets are configured, and the
+frontend is live at `https://spaced-vocabulary.vercel.app`. The minutely cron job
+is active. A real pg_net call using the Vault credential returned HTTP 200 with
+an empty queue. Live API checks verified anonymous Auth, configuration reads,
+disabled reminder save/read/delete, and rejection of unauthenticated/user-dispatch
+requests. The disposable smoke-test account was deleted. The production UI bundle
+and exact service worker file were verified over HTTPS. Each user must still
+opt in on their own device and send a test notification to verify OS delivery.
+
+Vercel production deployments triggered by GitHub build only committed files.
+Keep the complete reminder frontend, service worker, backend sources, and applied
+migrations in Git even when they were originally deployed directly from the CLI.
+Before pushing `main`, confirm the commit includes all features already running
+in production. After deployment, verify both the reminder settings and quiz are
+present and `/review-sw.js` returns JavaScript matching the tracked file.
+
+Validate frontend tests/build as described above. For the Edge Function:
+
+```powershell
+deno check --config supabase/functions/review-reminders/deno.json supabase/functions/review-reminders/index.ts
+deno test --allow-env --allow-read --config supabase/functions/review-reminders/deno.json supabase/functions/review-reminders/index_test.ts
+```
+
+`supabase/tests/review_reminders.sql` is a rollback-only PostgreSQL test with two
+disposable Auth accounts (`user_a`/`user_b` psql variables). It checks claims,
+completion skips, leases, retry limits, daily deduplication, timezones, expiry,
+disabled/future schedules, owner-read RLS and forbidden client writes/RPC calls.
+It does not exercise actual pg_cron/pg_net extensions or a real device delivery.
+
+Browser push requires HTTPS and notification permission. On iOS/iPadOS 16.4+,
+install the site on the Home Screen and enable notifications from that app.
+Push can arrive while the page is closed; OS settings, network availability and
+desktop browser background-process settings can delay or prevent delivery.
+Clicking a notification opens `/?review=daily`, or navigates an existing app window
+to that URL and focuses it. The service worker handles push only; it does
+not cache or serve application requests.
+
 ## Streak protection and recovery
 
 `20261013010000_streak_protection_and_recovery.sql` adds server-owned protection
