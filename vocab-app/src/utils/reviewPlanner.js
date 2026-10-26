@@ -79,6 +79,48 @@ export const filterReviewWords = (words, { folderIds = ['all'], allFolderIds = [
   return words.filter(word => (!onlyStarred || word.isStarred) && (allSelected || word.folderIds?.some(id => folderIds.includes(id))));
 };
 
+// A daily summary quiz recaps what was actually completed today, regardless
+// of the folder/star filters currently selected on the setup screen.
+export const DAILY_SUMMARY_QUIZ_SIZE = 5;
+
+export const dailySummaryWords = (words, completedIds) => {
+  const completed = new Set((completedIds || []).map(String));
+  return [...new Map(
+    (words || [])
+      .filter(word => word.word?.trim() && completed.has(wordReviewId(word)))
+      .map(word => [wordReviewId(word), word])
+  ).values()];
+};
+
+export const buildDailySummaryQuiz = (words, completedIds, {
+  introducedIds = [], seenIds = [], random = Math.random
+} = {}) => {
+  const unique = dailySummaryWords(words, completedIds);
+  const shuffle = items => {
+    const result = [...items];
+    for (let index = result.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(random() * (index + 1));
+      [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+    }
+    return result;
+  };
+  // A newly learned word already has FSRS history by quiz time. Use today's
+  // introduction record rather than its current scheduling state.
+  const introduced = new Set(introducedIds.map(String));
+  const seen = new Set(seenIds.map(String));
+  const fresh = unique.filter(word => introduced.has(wordReviewId(word)));
+  const old = unique.filter(word => !introduced.has(wordReviewId(word)));
+  const size = Math.min(DAILY_SUMMARY_QUIZ_SIZE, unique.length);
+  const freshCount = fresh.length && old.length && size > 1
+    ? Math.min(fresh.length, size - 1, Math.max(1, size - old.length, Math.round(size * fresh.length / unique.length)))
+    : Math.min(size, fresh.length);
+  const pick = (pool, count) => [
+    ...shuffle(pool.filter(word => !seen.has(wordReviewId(word)))),
+    ...shuffle(pool.filter(word => seen.has(wordReviewId(word))))
+  ].slice(0, count);
+  return shuffle([...pick(fresh, freshCount), ...pick(old, size - freshCount)]);
+};
+
 export const planReview = ({ words, kind = 'daily', size = 5, now = new Date(), completedIds = [], goal = 10, newIntroduced = 0, recovery = false }) => {
   const unique = [...new Map(words.map(word => [wordReviewId(word), word])).values()];
   const fresh = unique.filter(isNewWord);

@@ -12,6 +12,7 @@ const ReviewCardBack = ({
     lastResult,
     feedback,
     reviewMode,
+    isSummaryQuiz = false,
     preferredReviewAudio,
     preferredAccent,
     setPreferredAccent,
@@ -148,6 +149,7 @@ const ReviewCardBack = ({
                     ? 'bg-blue-50 text-blue-700 border border-blue-200'
                     : feedback === 'correct' || feedback === 'exact'
                         ? 'bg-green-500 text-white'
+                        : isSummaryQuiz ? 'bg-amber-50 text-amber-900 border border-amber-200'
                         : feedback === 'typo'
                             ? 'bg-amber-500 text-white'
                             : 'bg-red-500 text-white'
@@ -163,6 +165,8 @@ const ReviewCardBack = ({
                         </div>
                     ) : feedback === 'correct' || feedback === 'exact' ? (
                         t('review.feedbackCorrect')
+                    ) : isSummaryQuiz ? (
+                        t('review.summaryQuiz.answerReminder', { word: currentReviewWord.word })
                     ) : feedback === 'typo' ? (
                         t('review.feedbackTypo')
                     ) : (

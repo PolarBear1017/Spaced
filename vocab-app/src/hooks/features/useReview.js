@@ -12,7 +12,8 @@ import { updateUserLibraryProgress } from '../../services/libraryService';
 import { speak, getAudioUrl } from '../../services/speechService';
 import i18n from '../../i18n/config';
 import useDailyReviewProgress from './useDailyReviewProgress';
-import { localDayKey, reviewCalendarDate, recordReview, changeDailyGoal, dailyReviewStats, planReview, wordReviewId, isNewWord, filterReviewWords, reviewDailyTarget, recoveryProgress } from '../../utils/reviewPlanner';
+import { DAILY_SUMMARY_QUIZ_SIZE, dailySummaryWords } from '../../utils/reviewPlanner';
+import { buildDailySummaryQuiz, localDayKey, reviewCalendarDate, recordReview, changeDailyGoal, dailyReviewStats, planReview, wordReviewId, isNewWord, filterReviewWords, reviewDailyTarget, recoveryProgress } from '../../utils/reviewPlanner';
 
 const useReview = ({
   vocabData,
@@ -33,6 +34,8 @@ const useReview = ({
   const [sessionSummary, setSessionSummary] = useState(null);
   const [setupNotice, setSetupNotice] = useState('');
   const ratedCardsRef = useRef(new Set());
+  const quizResultsRef = useRef([]);
+  const quizSeenRef = useRef({ day: null, ids: new Set() });
   const roundProgressRef = useRef({ day: null, addedIds: new Set() });
   const advancedCardsRef = useRef(new Set());
   const sessionOwnerRef = useRef(progressKey);
@@ -85,6 +88,8 @@ const useReview = ({
       sessionOwnerRef.current = progressKey;
       setReviewQueue([]);
       setSessionSummary(null);
+      quizResultsRef.current = [];
+      quizSeenRef.current = { day: null, ids: new Set() };
       setSetupNotice('');
       if (activeTab === 'review_session') setActiveTab('review');
     }
@@ -225,7 +230,52 @@ const useReview = ({
     setActiveTab('review_session');
   }, [allFolderIds, onlyStarred, progressKey, cloudReady, controller, setActiveTab, vocabData, availableCount, setReviewMode, setIsFlipped, setAnswerHint]);
 
+  const startDailySummaryQuiz = useCallback((mode = 'random') => {
+    if (!cloudReady) return;
+    const latest = controller.getSnapshot().progress;
+    const today = reviewCalendarDate(new Date(), latest.timezone);
+    const day = localDayKey(today);
+    const completedIds = latest.days[day]?.words || [];
+    if (quizSeenRef.current.day !== day) quizSeenRef.current = { day, ids: new Set() };
+    const mistakesOnly = mode === 'mistakes';
+    const incorrectIds = sessionSummary?.day === day ? sessionSummary.incorrectIds || [] : [];
+    const quizWords = buildDailySummaryQuiz(vocabData,
+      mistakesOnly ? completedIds.filter(id => incorrectIds.includes(String(id))) : completedIds, {
+        introducedIds: latest.days[day]?.introduced || [],
+        seenIds: [...quizSeenRef.current.ids]
+      });
+    if (!latest.days[day]?.checkedIn || quizWords.length === 0) {
+      setSetupNotice(i18n.t('review.summaryQuiz.unavailable'));
+      return;
+    }
+
+    sessionOwnerRef.current = progressKey;
+    ratedCardsRef.current = new Set();
+    quizResultsRef.current = [];
+    advancedCardsRef.current = new Set();
+    roundProgressRef.current = { day, addedIds: new Set() };
+    setSessionKind('summaryQuiz');
+    setSessionSummary(null);
+    setSetupNotice('');
+    setReviewQueue(quizWords.map(word => ({
+      ...word,
+      reviewEntryIndex: Math.floor(Math.random() * Math.max(1, (word.selectedDefinitions || word.selected_definitions || []).length))
+    })));
+    setCurrentCardIndex(0);
+    setReviewMode('spelling');
+    setIsFlipped(false);
+    setUserAnswer('');
+    setFeedback(null);
+    setIsAwaitingNext(false);
+    setPendingAutoGrade(null);
+    setAnswerHint('');
+    setHasMistake(false);
+    setActiveTab('review_session');
+  }, [cloudReady, controller, progressKey, setActiveTab, vocabData, sessionSummary]);
+
   const advanceToNextCard = useCallback(() => {
+    // Every quiz question needs one submitted answer before it can be advanced.
+    if (sessionKind === 'summaryQuiz' && !ratedCardsRef.current.has(currentCardIndex)) return;
     if (advancedCardsRef.current.has(currentCardIndex)) return;
     advancedCardsRef.current.add(currentCardIndex);
     if (pendingAutoGrade !== null) {
@@ -243,7 +293,19 @@ const useReview = ({
       setHasMistake(false);
     } else {
       const round = roundProgressRef.current;
-      setSessionSummary({ count: ratedCardsRef.current.size, addedCount: round.addedIds.size, day: round.day, kind: sessionKind });
+      if (sessionKind === 'summaryQuiz') {
+        const results = quizResultsRef.current;
+        setSessionSummary({
+          count: results.length,
+          correctCount: results.filter(result => result.correct).length,
+          incorrectWords: results.filter(result => !result.correct).map(result => result.word),
+          incorrectIds: results.filter(result => !result.correct).map(result => result.id),
+          day: round.day,
+          kind: sessionKind
+        });
+      } else {
+        setSessionSummary({ count: ratedCardsRef.current.size, addedCount: round.addedIds.size, day: round.day, kind: sessionKind });
+      }
       setActiveTab('review');
     }
   }, [currentCardIndex, pendingAutoGrade, reviewQueue.length, sessionKind, setActiveTab, setIsFlipped, setAnswerHint]);
@@ -289,6 +351,17 @@ const useReview = ({
     }
 
     if (sessionOwnerRef.current !== progressKey || ratedCardsRef.current.has(currentCardIndex)) return;
+    if (sessionKind === 'summaryQuiz') {
+      ratedCardsRef.current.add(currentCardIndex);
+      quizSeenRef.current.ids.add(wordReviewId(currentWord));
+      quizResultsRef.current.push({
+        id: wordReviewId(currentWord),
+        word: currentWord.word,
+        correct: grade >= 3
+      });
+      if (options.advance !== false) advanceToNextCardRef.current?.();
+      return;
+    }
     const recordCompletion = () => {
       ratedCardsRef.current.add(currentCardIndex);
       saveProgress(value => {
@@ -361,6 +434,7 @@ const useReview = ({
   }, [processRating]);
 
   const checkAnswer = useCallback(() => {
+    if (isAwaitingNext || (sessionKind === 'summaryQuiz' && ratedCardsRef.current.has(currentCardIndex))) return;
     const currentWord = reviewQueue[currentCardIndex];
     if (!currentWord) {
       setActiveTab('review');
@@ -400,7 +474,7 @@ const useReview = ({
       }
     }
 
-    if (reviewMode !== 'flashcard' && result.allowRetry) {
+    if (sessionKind !== 'summaryQuiz' && reviewMode !== 'flashcard' && result.allowRetry) {
       setFeedback('incorrect');
       setLastResult(result);
       setIsFlipped(false);
@@ -438,6 +512,7 @@ const useReview = ({
     isAwaitingNext,
     reviewMode,
     reviewQueue,
+    sessionKind,
     setActiveTab,
     userAnswer,
     setIsFlipped,
@@ -505,8 +580,11 @@ const useReview = ({
       dailyGoal: progress.goal,
       dailyTarget: availableCount ? reviewDailyTarget(progress, calendarDate, availableCount) : progress.goal,
       todayStats,
+      summaryQuizCount: Math.min(DAILY_SUMMARY_QUIZ_SIZE, dailySummaryWords(vocabData, todayIds).length),
       recoveryInfo,
-      sessionSummary: sessionSummary && { ...sessionSummary, addedCount: sessionSummary.day === localDayKey(calendarDate) ? sessionSummary.addedCount : 0 },
+      sessionSummary: sessionSummary?.kind === 'summaryQuiz' && sessionSummary.day !== localDayKey(calendarDate)
+        ? null
+        : sessionSummary && { ...sessionSummary, addedCount: sessionSummary.day === localDayKey(calendarDate) ? sessionSummary.addedCount : 0 },
       setupNotice,
       reviewClock: clock,
       todayIds,
@@ -514,6 +592,7 @@ const useReview = ({
       reviewQueue,
       currentCardIndex,
       reviewMode,
+      sessionKind,
       isFlipped,
       userAnswer,
       feedback,
@@ -548,6 +627,7 @@ const useReview = ({
       setReviewMode,
       setIsFlipped,
       startReview,
+      startDailySummaryQuiz,
       advanceToNextCard,
       processRating,
       checkAnswer,

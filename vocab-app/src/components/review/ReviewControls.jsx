@@ -8,7 +8,9 @@ const ReviewControls = ({
     checkAnswer,
     processRating,
     advanceToNextCard,
-    isAwaitingNext
+    isAwaitingNext,
+    isLastCard = false,
+    isSummaryQuiz = false
 }) => {
     const { t } = useTranslation();
 
@@ -65,7 +67,7 @@ const ReviewControls = ({
             disabled={!isAwaitingNext}
             className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-60"
         >
-            {t('review.nextCard')}
+            {isSummaryQuiz && isLastCard ? t('review.summaryQuiz.viewResults') : t('review.nextCard')}
         </button>
     );
 };

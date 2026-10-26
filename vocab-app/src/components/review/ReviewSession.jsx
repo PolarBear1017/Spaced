@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { speak } from '../../services/speechService';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 
@@ -15,6 +16,7 @@ const ReviewSession = ({
   reviewQueue,
   currentCardIndex,
   reviewMode,
+  sessionKind,
   isFlipped,
   userAnswer,
   feedback,
@@ -38,6 +40,7 @@ const ReviewSession = ({
   advanceToNextCard,
   giveHint
 }) => {
+  const { t } = useTranslation();
   const {
     state: { audioSpeed, chineseAudioSpeed, playAudioShortcut }
   } = useSettingsContext();
@@ -64,6 +67,7 @@ const ReviewSession = ({
             checkAnswer={checkAnswer}
             giveHint={giveHint}
             feedback={feedback}
+            isSummaryQuiz={sessionKind === 'summaryQuiz'}
           />
         );
       case 'cloze':
@@ -108,7 +112,10 @@ const ReviewSession = ({
         <button onClick={() => setActiveTab('review')} className="text-gray-500 hover:text-gray-800">
           <X className="w-6 h-6" />
         </button>
-        <div className="text-sm font-medium text-gray-500">{currentCardIndex + 1} / {reviewQueue.length}</div>
+        <div className="text-center">
+          {sessionKind === 'summaryQuiz' && <div className="text-xs font-bold text-blue-600">{t('review.summaryQuiz.sessionTitle')}</div>}
+          <div className="text-sm font-medium text-gray-500">{currentCardIndex + 1} / {reviewQueue.length}</div>
+        </div>
         <div className="w-6"></div>
       </div>
 
@@ -123,6 +130,7 @@ const ReviewSession = ({
               lastResult={lastResult}
               feedback={feedback}
               reviewMode={reviewMode}
+              isSummaryQuiz={sessionKind === 'summaryQuiz'}
               preferredReviewAudio={preferredReviewAudio}
               preferredAccent={preferredAccent}
               setPreferredAccent={setPreferredAccent}
@@ -142,6 +150,8 @@ const ReviewSession = ({
             processRating={processRating}
             advanceToNextCard={advanceToNextCard}
             isAwaitingNext={isAwaitingNext}
+            isLastCard={currentCardIndex === reviewQueue.length - 1}
+            isSummaryQuiz={sessionKind === 'summaryQuiz'}
           />
         </div>
       </div>

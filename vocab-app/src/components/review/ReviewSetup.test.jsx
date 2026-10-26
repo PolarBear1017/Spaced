@@ -63,4 +63,40 @@ describe('daily review progress display', () => {
     expect(render(props)).toContain('Practiced 5 words');
     expect(render(props)).toContain('Today’s progress +0 words');
   });
+
+  it('unlocks the optional spelling summary quiz only after today is checked in', () => {
+    const locked = render({ todayStats: { completed: 8, checkedIn: false, streak: 0 } });
+    expect(locked).toContain('完成今日複習目標並打卡後即可開始');
+    expect(locked).toMatch(/<button[^>]*disabled[^>]*>開始今日測驗 · 5 題<\/button>/);
+
+    const unlocked = render({ todayStats: { completed: 12, checkedIn: true, streak: 1 } });
+    expect(unlocked).toContain('開始今日測驗 · 5 題');
+    expect(unlocked).toContain('不影響今日簽到、複習進度或單字排程');
+  });
+
+  it('shows the summary quiz score and words to review again', () => {
+    const html = render({
+      todayStats: { completed: 12, checkedIn: true, streak: 1 },
+      sessionSummary: { kind: 'summaryQuiz', count: 12, correctCount: 10, incorrectWords: ['apple', 'orbit'] }
+    });
+    expect(html).toContain('這次拼對 10／12 個單字');
+    expect(html).toContain('這幾個字再看一次：apple、orbit');
+    expect(html).toContain('今日複習已完成');
+    expect(html).toContain('再練錯字');
+    expect(html).toContain('再抽 5 題');
+    expect(html).not.toContain('正確率');
+    expect(html).not.toContain('今日進度 +');
+  });
+
+  it('shows fewer questions for small pools and hides mistake practice for a perfect round', async () => {
+    const props = { todayStats: { completed: 3, checkedIn: true, streak: 1 },
+      summaryQuizCount: 2, sessionSummary: { kind: 'summaryQuiz', count: 2, correctCount: 2, incorrectWords: [] } };
+    const html = render(props);
+    expect(html).toContain('開始今日測驗 · 2 題');
+    expect(html).toContain('再抽 2 題');
+    expect(html).not.toContain('再練錯字');
+    await i18n.changeLanguage('en');
+    expect(render(props)).toContain('You spelled 2 of 2 words correctly');
+    expect(render(props)).toContain('Draw 2 more questions');
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeDailyGoal, dailyReviewStats, filterReviewWords, isNewWord, localDayKey, normalizeDailyReview, planReview, recordReview } from './reviewPlanner';
+import { buildDailySummaryQuiz, changeDailyGoal, dailyReviewStats, filterReviewWords, isNewWord, localDayKey, normalizeDailyReview, planReview, recordReview } from './reviewPlanner';
 
 const now = new Date(2026, 9, 12, 12);
 const old = (id, due = new Date(2026, 9, 11), extra = {}) => ({ id, reps: 2, state: 2, nextReview: due.toISOString(), ...extra });
@@ -7,6 +7,46 @@ const fresh = id => ({ id, proficiencyScore: 0 });
 const completedDay = { words: ['1', '2', '3', '4', '5'], checkedIn: true };
 
 describe('daily review planner', () => {
+  it('builds a shuffled summary quiz from all unique words completed today', () => {
+    const words = [old('1'), old('2'), old('3'), { ...old('duplicate'), libraryId: '2' }].map(word => ({ ...word, word: `word${word.id}` }));
+    const quiz = buildDailySummaryQuiz(words, ['1', '2'], { random: () => 0.99 });
+    expect(quiz.map(word => String(word.libraryId ?? word.id))).toEqual(['1', '2']);
+    expect(buildDailySummaryQuiz(words, ['missing'])).toEqual([]);
+  });
+
+  it('samples five words proportionally and mixes new and old introductions', () => {
+    const words = Array.from({ length: 12 }, (_, i) => ({ ...old(String(i)), word: `word${i}` }));
+    const ids = words.map(word => word.id);
+    const introducedIds = ids.slice(0, 10);
+    const quiz = buildDailySummaryQuiz(words, ids, { introducedIds });
+    expect(quiz).toHaveLength(5);
+    expect(new Set(quiz.map(word => word.id)).size).toBe(5);
+    expect(quiz.filter(word => introducedIds.includes(word.id))).toHaveLength(4);
+    expect(quiz.filter(word => !introducedIds.includes(word.id))).toHaveLength(1);
+  });
+
+  it('includes a minority group even when proportional rounding would exclude it', () => {
+    const words = Array.from({ length: 30 }, (_, i) => ({ id: String(i), word: `word${i}` }));
+    const ids = words.map(word => word.id);
+    const quiz = buildDailySummaryQuiz(words, ids, { introducedIds: ['0'] });
+    expect(quiz.some(word => word.id === '0')).toBe(true);
+    expect(quiz).toHaveLength(5);
+  });
+
+  it('prioritizes untested words in each group and keeps small or single-group rounds valid', () => {
+    const words = Array.from({ length: 12 }, (_, i) => ({ id: String(i), word: `word${i}` }));
+    const ids = words.map(word => word.id);
+    const introducedIds = ids.slice(0, 10);
+    const first = buildDailySummaryQuiz(words, ids, { introducedIds });
+    const seenIds = first.map(word => word.id);
+    const second = buildDailySummaryQuiz(words, ids, { introducedIds, seenIds });
+    expect(second.every(word => !seenIds.includes(word.id))).toBe(true);
+    expect(buildDailySummaryQuiz(words, ids.slice(0, 3), { introducedIds })).toHaveLength(3);
+    expect(buildDailySummaryQuiz(words, ids, { introducedIds: ids })).toHaveLength(5);
+    expect(buildDailySummaryQuiz(words, ids)).toHaveLength(5);
+    expect(buildDailySummaryQuiz([{ id: '1', word: '' }], ['1'])).toEqual([]);
+  });
+
   it('uses the same folder and star scope, including explicit selection of all folders', () => {
     const words = [old('unfiled'), { ...old('a'), folderIds: ['a'], isStarred: true }, { ...old('b'), folderIds: ['b'] }];
     expect(filterReviewWords(words, { folderIds: ['a'], onlyStarred: true }).map(w => w.id)).toEqual(['a']);

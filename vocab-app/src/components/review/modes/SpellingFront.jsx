@@ -10,7 +10,8 @@ const SpellingFront = ({
     handleAnswerChange,
     checkAnswer,
     giveHint,
-    feedback
+    feedback,
+    isSummaryQuiz = false
 }) => {
     const { t } = useTranslation();
 
@@ -41,15 +42,17 @@ const SpellingFront = ({
                     spellCheck={false}
                     autoFocus
                 />
-                <button
-                    onClick={giveHint}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors p-2"
-                    title={t('review.showHint')}
-                >
-                    <Lightbulb className="w-5 h-5" />
-                </button>
+                {!isSummaryQuiz && (
+                    <button
+                        onClick={giveHint}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors p-2"
+                        title={t('review.showHint')}
+                    >
+                        <Lightbulb className="w-5 h-5" />
+                    </button>
+                )}
             </div>
-            {feedback === 'incorrect' && (
+            {!isSummaryQuiz && feedback === 'incorrect' && (
                 <p className="text-sm text-red-500">{t('review.spellingRetryHint')}</p>
             )}
         </div>

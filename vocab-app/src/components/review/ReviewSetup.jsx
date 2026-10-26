@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Folder, Book, RefreshCw, Settings, Mic, Star } from 'lucide-react';
+import { ArrowRight, Folder, Book, RefreshCw, Settings, Mic, Star, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ReviewFoldersSelector from './ReviewFoldersSelector';
 import ReviewInfo from './ReviewInfo';
@@ -15,6 +15,7 @@ const ReviewSetup = ({
   dailyTarget,
   setDailyGoal,
   todayStats,
+  summaryQuizCount = Math.min(5, todayStats.completed),
   sessionSummary,
   dismissSummary,
   setupNotice,
@@ -28,6 +29,7 @@ const ReviewSetup = ({
   selectedFolderLabel,
   selectedReviewFolders,
   startReview,
+  startDailySummaryQuiz,
   sortedFolders,
   allFoldersSelected,
   toggleReviewFolder,
@@ -80,7 +82,34 @@ const ReviewSetup = ({
           <button onClick={() => setRecoveryMode('regular')} disabled={!cloudReady} className="text-blue-800 underline text-sm mt-3 disabled:opacity-50">{t('review.support.regular')}</button>
         </section>
       )}
-      {sessionSummary && (
+      {sessionSummary?.kind === 'summaryQuiz' && (
+        <section className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6" role="status">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-blue-600" />
+            <div>
+              <h2 className="font-bold text-blue-900 text-lg">{t('review.summaryQuiz.completed')}</h2>
+              <p className="text-blue-800 mt-1">{t('review.summaryQuiz.score', {
+                correct: sessionSummary.correctCount,
+                total: sessionSummary.count
+              })}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-blue-800">{t('review.summaryQuiz.encouragement')}</p>
+          {sessionSummary.incorrectWords?.length > 0 && (
+            <p className="mt-4 rounded-xl bg-white/70 p-3 text-sm text-blue-900">
+              {t('review.summaryQuiz.reviewAgain', { words: sessionSummary.incorrectWords.join('、') })}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3 mt-4">
+            {sessionSummary.incorrectWords?.length > 0 && (
+              <button onClick={() => startDailySummaryQuiz('mistakes')} disabled={!cloudReady} className="bg-blue-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">{t('review.summaryQuiz.practiceMistakes')}</button>
+            )}
+            <button onClick={() => startDailySummaryQuiz()} disabled={!cloudReady || !summaryQuizCount} className="border border-blue-300 rounded-lg px-4 py-2 text-blue-800 disabled:opacity-50">{t('review.summaryQuiz.retry', { count: summaryQuizCount })}</button>
+            <button onClick={dismissSummary} className="border border-blue-300 rounded-lg px-4 py-2 text-blue-800">{t('review.summaryQuiz.done')}</button>
+          </div>
+        </section>
+      )}
+      {sessionSummary && sessionSummary.kind !== 'summaryQuiz' && (
         <section className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6" role="status">
           <h2 className="font-bold text-green-800 text-lg">{t('review.daily.sessionDone', { count: sessionSummary.count })}</h2>
           <p className="text-green-700 mt-2">{t('review.daily.sessionAdded', { count: sessionSummary.addedCount })}</p>
@@ -138,6 +167,26 @@ const ReviewSetup = ({
           <div role="status" className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
             <p>{t(`review.daily.cloud.${cloudStatus}`)}</p>
             {cloudStatus === 'offline' && <button onClick={retryCloudSync} className="mt-2 text-sm text-blue-700 underline">{t('review.daily.retrySync')}</button>}
+          </div>
+        )}
+        {todayStats.completed > 0 && (
+          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+            <div className="flex items-start gap-3">
+              <Trophy className="mt-0.5 h-6 w-6 shrink-0 text-blue-600" />
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-blue-950">{t('review.summaryQuiz.title')}</h3>
+                <p className="mt-1 text-sm text-blue-800">{t('review.summaryQuiz.description', { count: summaryQuizCount })}</p>
+                {!todayStats.checkedIn && <p className="mt-2 text-xs text-blue-700">{t('review.summaryQuiz.locked')}</p>}
+                <button
+                  onClick={() => startDailySummaryQuiz()}
+                  disabled={!cloudReady || !todayStats.checkedIn || !summaryQuizCount}
+                  className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('review.summaryQuiz.start', { count: summaryQuizCount })}
+                </button>
+                <p className="mt-2 text-xs text-blue-700">{t('review.summaryQuiz.noImpact')}</p>
+              </div>
+            </div>
           </div>
         )}
       </section>
