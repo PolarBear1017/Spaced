@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Folder, Book, RefreshCw, Settings, Mic, Star, Trophy } from 'lucide-react';
+import { ArrowRight, Folder, Copy, CaseSensitive, TextCursorInput, Headphones, Star, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ReviewFoldersSelector from './ReviewFoldersSelector';
 import ReviewInfo from './ReviewInfo';
@@ -57,11 +57,17 @@ const ReviewSetup = ({
   }
 
   const reviewModes = [
-    { id: 'flashcard', name: t('review.modes.flashcard.name'), icon: Book, desc: t('review.modes.flashcard.desc') },
-    { id: 'spelling', name: t('review.modes.spelling.name'), icon: RefreshCw, desc: t('review.modes.spelling.desc') },
-    { id: 'cloze', name: t('review.modes.cloze.name'), icon: Settings, desc: t('review.modes.cloze.desc') },
-    { id: 'dictation', name: t('review.modes.dictation.name'), icon: Mic, desc: t('review.modes.dictation.desc') }
+    { id: 'flashcard', name: t('review.modes.flashcard.name'), icon: Copy, desc: t('review.modes.flashcard.desc') },
+    { id: 'spelling', name: t('review.modes.spelling.name'), icon: CaseSensitive, desc: t('review.modes.spelling.desc') },
+    { id: 'cloze', name: t('review.modes.cloze.name'), icon: TextCursorInput, desc: t('review.modes.cloze.desc') },
+    { id: 'dictation', name: t('review.modes.dictation.name'), icon: Headphones, desc: t('review.modes.dictation.desc') }
   ];
+  const modeColors = {
+    flashcard: { card: 'border-blue-200 bg-blue-50/40', button: 'hover:bg-blue-50 focus-visible:outline-blue-500', icon: 'bg-blue-400 text-white group-hover:bg-blue-500' },
+    spelling: { card: 'border-violet-200 bg-violet-50/40', button: 'hover:bg-violet-50 focus-visible:outline-violet-500', icon: 'bg-violet-400 text-white group-hover:bg-violet-500' },
+    cloze: { card: 'border-amber-200 bg-amber-50/40', button: 'hover:bg-amber-50 focus-visible:outline-amber-500', icon: 'bg-amber-400 text-white group-hover:bg-amber-500' },
+    dictation: { card: 'border-emerald-200 bg-emerald-50/40', button: 'hover:bg-emerald-50 focus-visible:outline-emerald-500', icon: 'bg-emerald-400 text-white group-hover:bg-emerald-500' }
+  };
 
   return (
     <>
@@ -259,9 +265,9 @@ const ReviewSetup = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {reviewModes.map(mode => (
-          <div key={mode.id} className="flex items-center rounded-xl border border-gray-200 bg-white pr-2">
-          <button onClick={() => startReview(selectedReviewFolders, mode.id, kind)} disabled={!cloudReady || (kind === 'daily' ? !dailyBatchCount : kind === 'new' ? !newCount : !learnedCount)} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-4 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 transition text-left group disabled:opacity-50 disabled:cursor-not-allowed">
-            <div className="w-9 h-9 shrink-0 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-blue-100 group-hover:text-blue-600 transition"><mode.icon className="w-5 h-5" /></div>
+          <div key={mode.id} className={`flex items-center rounded-xl border pr-2 ${modeColors[mode.id].card}`}>
+          <button onClick={() => startReview(selectedReviewFolders, mode.id, kind)} disabled={!cloudReady || (kind === 'daily' ? !dailyBatchCount : kind === 'new' ? !newCount : !learnedCount)} className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl p-4 focus-visible:outline-2 transition text-left group disabled:opacity-50 disabled:cursor-not-allowed ${modeColors[mode.id].button}`}>
+            <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition ${modeColors[mode.id].icon}`}><mode.icon className="w-6 h-6" aria-hidden="true" /></div>
             <div>
               <div className="font-bold text-gray-800">{mode.name}</div>
             </div>
