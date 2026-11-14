@@ -24,6 +24,41 @@ describe('recent folder activity', () => {
     expect(next.folders[0]._lastModified).toBe(0);
     expect(next.folders[0].last_activity_at).toBe('2026-10-24T04:00:00.000Z');
   });
+  it('reorders after a word edit without waiting for a cloud event, and ignores stale sync', () => {
+    const folders = [
+      { id: 'a', last_activity_at: '2026-11-10T00:00:00Z' },
+      { id: 'b', last_activity_at: '2026-11-12T00:00:00Z' }
+    ];
+    const edited = libraryDataReducer({ ...state, folders }, {
+      field: 'vocabData',
+      value: [{ ...state.vocabData[0], selectedDefinitions: [{ definition: 'changed' }] }],
+      modifiedAt: Date.parse('2026-11-14T00:00:00Z')
+    });
+    const stale = libraryDataReducer(edited, { field: 'folders', value: folders });
+    expect([...stale.folders].sort(compareRecentFolders).map(folder => folder.id)).toEqual(['a', 'b']);
+    const confirmed = libraryDataReducer(stale, {
+      field: 'folders',
+      value: [{ ...folders[0], last_activity_at: '2026-11-13T00:00:00Z' }, folders[1]]
+    });
+    expect(confirmed.folders[0]._pendingActivityAt).toBeUndefined();
+    expect(libraryDataReducer(confirmed, { field: 'folders', value: folders }).folders[0])
+      .toBe(confirmed.folders[0]);
+  });
+  it('skips review-only updates and unchanged memberships', () => {
+    const initial = { ...state, vocabData: [{ id: 'word', folderIds: ['a', 'c'] }] };
+    const reviewed = libraryDataReducer(initial, {
+      field: 'vocabData',
+      value: [{ ...initial.vocabData[0], proficiencyScore: 10 }],
+      modifiedAt: 100
+    });
+    expect(reviewed.folders).toEqual(initial.folders);
+    const moved = libraryDataReducer(reviewed, {
+      field: 'vocabData',
+      value: [{ ...reviewed.vocabData[0], folderIds: ['b', 'c'] }],
+      modifiedAt: 200
+    });
+    expect(moved.folders.map(folder => folder._lastModified)).toEqual([200, 200, undefined]);
+  });
   it('keeps cloud ordering authoritative when a device clock is ahead', () => {
     const folders = [
       { id: 'server-newer', last_activity_at: '2026-10-24T04:00:01.000Z' },
